@@ -1,5 +1,6 @@
 // Renders the DMG window background (560×360 pt, @1x and @2x) in Meshy's mesh style, in the
-// installer's green and yellow. Run: swiftc -o /tmp/bg Design/make-dmg-background.swift && /tmp/bg out-folder
+// installer's green and yellow. Run: swiftc -o /tmp/bg Design/make-dmg-background.swift && /tmp/bg out-folder,
+// then: tiffutil -cathidpicheck out-folder/background.png out-folder/background@2x.png -out Design/DMG/background.tiff
 import AppKit
 import SwiftUI
 
