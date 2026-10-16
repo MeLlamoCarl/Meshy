@@ -51,9 +51,9 @@ struct AboutView: View {
                 VStack(alignment: .leading) {
                     link("Meshy on GitHub", systemImage: "chevron.left.forwardslash.chevron.right", AboutView.repositoryURL)
                     link("Original Acrylic project", systemImage: "arrow.triangle.branch", AboutView.originalProjectURL)
-                    link("MeshKit", systemImage: "circle.grid.cross", URL(string: "https://github.com/EthanLipnik/MeshKit")!)
+                    link("MeshKit", systemImage: "circle.grid.cross", URL(string: "https://github.com/MeLlamoCarl/MeshKit")!)
                     link("MeshGradient", systemImage: "square.stack.3d.forward.dottedline",
-                         URL(string: "https://github.com/patskovn/MeshGradient")!)
+                         URL(string: "https://github.com/MeLlamoCarl/MeshGradient")!)
 
                     Link(destination: URL(string: "https://pixabay.com/")!) {
                         HStack {
