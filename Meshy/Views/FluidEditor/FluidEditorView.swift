@@ -243,7 +243,7 @@ struct FluidEditorView: View {
                             Circle()
                                 .fill(hue.representativeColor)
                                 .frame(width: 10, height: 10)
-                            Text(hue.displayTitle)
+                            Text(hue.presetTitle)
                                 .font(.caption.bold())
                         }
                         .frame(maxWidth: .infinity)

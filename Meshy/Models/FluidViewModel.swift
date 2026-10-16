@@ -56,6 +56,12 @@ extension Hue {
     static var presetCases: [Hue] {
         allCases.filter { $0 != .monochrome }
     }
+
+    /// Name shown in the UI. `displayTitle` stays as the storage key, so `.random` (several
+    /// hues mixed in one mesh) is stored as "Random" but labelled "Mixed", apart from the 🎲 button.
+    var presetTitle: String {
+        self == .random ? "Mixed" : displayTitle
+    }
 }
 
 class FluidViewModel: ObservableObject {

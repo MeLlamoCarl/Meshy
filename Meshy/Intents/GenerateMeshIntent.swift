@@ -133,7 +133,7 @@ enum IntentPalette: String, CaseIterable, Hashable, AppEnum {
         .purple: "Purple",
         .red: "Red",
         .monochrome: "Monochrome",
-        .rainbow: "Rainbow",
+        .rainbow: "Mixed",
         .random: "Random"
     ]
 

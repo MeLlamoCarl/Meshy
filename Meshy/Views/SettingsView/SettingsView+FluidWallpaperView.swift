@@ -191,7 +191,7 @@ extension SettingsView {
                     DisclosureGroup(isExpanded: $isShowingPalettes) {
                         ForEach(selectedHues.indices, id: \.self) { index in
                             Toggle(
-                                selectedHues[index].hue.displayTitle,
+                                selectedHues[index].hue.presetTitle,
                                 isOn: $selectedHues[index].isOn
                             )
                         }

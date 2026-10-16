@@ -313,7 +313,7 @@ private struct PalettePresetItem: View {
                     : nil
             )
             .overlay(
-                Text(hue.displayTitle)
+                Text(hue.presetTitle)
                     .font(.caption.bold())
                     .foregroundColor(.white)
                     .padding(6),

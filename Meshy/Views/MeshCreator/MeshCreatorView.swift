@@ -87,7 +87,7 @@ struct MeshCreatorView: View {
                                 newPalette(hue, luminosity: .bright)
                             }
                         } label: {
-                            Text(hue.displayTitle)
+                            Text(hue.presetTitle)
                         } primaryAction: {
                             newPalette(hue)
                         }
