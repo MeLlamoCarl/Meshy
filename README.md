@@ -25,7 +25,8 @@ AI tools were used to help develop this app.
 
 Grab `Meshy-x.y.z.dmg` from the [latest release](https://github.com/MeLlamoCarl/Meshy/releases/latest),
 open it and drag **Meshy** to **Applications**. Requires macOS 13 Ventura or later, on Apple silicon or
-Intel.
+Intel. So far Meshy has only been tested on Apple silicon with macOS 27, but it should work on any
+supported Mac and macOS version.
 
 Meshy is free and open source. It is signed ad hoc rather than with a paid Apple Developer ID, so the
 first time you open it macOS says it can't verify the developer:
