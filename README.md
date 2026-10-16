@@ -1,33 +1,55 @@
-# Acrylic
+# Meshy
 
-##### for macOS
+Live mesh-gradient and video wallpapers for macOS.
 
-###### *If you're looking for the iOS version, go [here](https://github.com/EthanLipnik/Acrylic-iOS)*
+Meshy brings [Acrylic](https://github.com/EthanLipnik/Acrylic), Ethan Lipnik's fluid wallpaper
+engine, back to life. Acrylic's last supported release was macOS Ventura; Meshy keeps the same
+idea (living, color-shifting mesh gradients and video wallpapers right on your desktop) working on
+newer versions of macOS, with a few small tweaks and improvements along the way:
 
-Acrylic is a fluid wallpaper engine for Mac, allowing you to create and enjoy live, color-changing mesh gradient wallpapers right on your desktop. It also has an iOS counterpart with more limited functionality.
+- Each display can have its own theme, and your choice is remembered across restarts
+- A Fluid Editor to design and save your own gradients
+- Video wallpapers from Pixabay (with your own free API key) or from your own files
+- Pauses automatically while an app is fullscreen
+- The menu bar tint follows the current wallpaper
+- Mouse-friendly preset rows
 
-## Features
+Meshy is not affiliated with or endorsed by the original author. See [NOTICE.md](NOTICE.md) for
+attributions and third-party licenses.
 
-- **Fluid Wallpaper**: Enjoy live, color-changing mesh gradients right on your desktop.
-- **Video Wallpaper**: Download and use videos from Pixabay on your desktop, or use your own videos. Acrylic can even compress the videos for better battery life.
-- **Export Your Own Mesh Gradients**: Create your own unique mesh gradients and export them for use anywhere.
+AI tools were used to help develop this app.
 
-## Installation
+## Download
 
-Acrylic is available for download on the App Store. Alternatively, you can build the app yourself from the source code.
+Grab `Meshy-x.y.z.dmg` from the [latest release](https://github.com/MeLlamoCarl/Meshy/releases/latest),
+open it and drag **Meshy** to **Applications**. Requires macOS 13 Ventura or later, on Apple silicon or
+Intel.
 
-## Contributing
+Meshy is free and open source. It is signed ad hoc rather than with a paid Apple Developer ID, so the
+first time you open it macOS says it can't verify the developer:
 
-Anyone can contribute to the development of Acrylic. We welcome and appreciate any contributions, no matter how small.
+1. Open Meshy once and dismiss the warning.
+2. Go to **System Settings › Privacy & Security**, find "Meshy was blocked…" and click **Open Anyway**.
+
+You only need to do this once. To check your download, compare `shasum -a 256 Meshy-x.y.z.dmg` with
+the checksum in the release notes.
+
+## Building
+
+```bash
+git clone --recurse-submodules https://github.com/MeLlamoCarl/Meshy.git
+cd Meshy
+xcodebuild -scheme Meshy -configuration Release -derivedDataPath build \
+  CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+```
+
+Then copy `build/Build/Products/Release/Meshy.app` to `/Applications/`. You may need
+`xcodebuild -downloadComponent MetalToolchain` first. `scripts/build-release.sh` builds the universal,
+ad hoc signed app and the DMG into `dist/`.
+
+Searching videos on Pixabay needs your own free API key, which the app asks for in Manage Videos
+(also under Settings › Video and the ⚙️ menu).
 
 ## License
 
-Acrylic is licensed under the MIT License. See the `LICENSE` file for more details.
-
-## Support and FAQ
-
-Support for Acrylic is provided through GitHub issues. If you encounter a problem or have a question, feel free to open a new issue there. We also have an FAQ section that might answer some of your questions.
-
-## Additional Resources
-
-For more information about Acrylic and other apps, visit [ethanlipnik.com/apps/acrylic](http://ethanlipnik.com/apps/acrylic).
+MIT — Copyright (c) 2023 Ethan Lipnik, Copyright (c) 2026 MeLlamoCarl. See [LICENSE.txt](LICENSE.txt).

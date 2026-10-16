@@ -110,3 +110,6 @@ fastlane/test_output
 
 iOSInjectionProject/
 OpenSesameConfig.generated.swift
+
+# Release output
+dist/

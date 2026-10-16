@@ -10,9 +10,9 @@ opt_in_rules: # some rules are only opt-in
   - colon
   - comma
 included: # paths to include during linting. `--path` is ignored if present.
-  - Acrylic
+  - Meshy
   - MeshKit
-  - Pixabay
+  - PixabayKit
 
 # configurable rules can be customized from this configuration file
 # binary rules can set their severity level

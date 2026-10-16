@@ -1,0 +1,96 @@
+{
+  "fill": {
+    "automatic-gradient": "extended-srgb:0.35000,0.70000,0.15000,1.00000"
+  },
+  "groups": [
+    {
+      "name": "Arrow",
+      "layers": [
+        {
+          "image-name": "5 Download Arrow.svg",
+          "name": "Download Arrow"
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      }
+    },
+    {
+      "layers": [
+        {
+          "blend-mode": "plus-lighter",
+          "fill": "none",
+          "glass": false,
+          "hidden": false,
+          "image-name": "2 Rays.png",
+          "name": "Rays"
+        },
+        {
+          "hidden": false,
+          "image-name": "4 Screen Bezel.svg",
+          "name": "Screen Bezel"
+        }
+      ],
+      "name": "Bezel",
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.3
+      }
+    },
+    {
+      "layers": [
+        {
+          "blend-mode": "screen",
+          "fill": {
+            "solid": "extended-srgb:0.90000,0.95000,0.55000,1.00000"
+          },
+          "glass": true,
+          "hidden": false,
+          "image-name": "3 Glass Square.svg",
+          "name": "Glass Square",
+          "opacity": 0.7
+        }
+      ],
+      "name": "Glass",
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.7
+      }
+    },
+    {
+      "layers": [
+        {
+          "hidden": false,
+          "image-name": "1 Background.png",
+          "name": "Background"
+        }
+      ],
+      "name": "Background",
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.3
+      }
+    }
+  ],
+  "supported-platforms": {
+    "circles": [
+      "watchOS"
+    ],
+    "squares": [
+      "macOS"
+    ]
+  }
+}
