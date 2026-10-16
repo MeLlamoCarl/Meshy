@@ -19,5 +19,7 @@ codesign --verify --deep --strict "$APP"
 
 VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Contents/Info.plist")
 mkdir -p dist
-"$ROOT/scripts/make-dmg.sh" "$APP" "dist/Meshy-$VERSION.dmg" | tee "dist/Meshy-$VERSION.dmg.sha256"
+"$ROOT/scripts/make-dmg.sh" "$APP" "dist/Meshy-$VERSION.dmg" >/dev/null
+# Bare file name, so `shasum -a 256 -c` works next to the downloaded DMG.
+(cd dist && shasum -a 256 "Meshy-$VERSION.dmg" | tee "Meshy-$VERSION.dmg.sha256")
 echo "Built dist/Meshy-$VERSION.dmg ($(lipo -archs "$APP/Contents/MacOS/Meshy"))"
