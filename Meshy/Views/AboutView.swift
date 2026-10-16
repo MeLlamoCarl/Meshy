@@ -36,7 +36,6 @@ struct AboutView: View {
                 .foregroundStyle(.secondary)
             LinksView()
             CreditsView()
-            Spacer()
         }
         .padding()
         .background(
@@ -87,8 +86,6 @@ struct AboutView: View {
                 userView("MeLlamoCarl", username: "MeLlamoCarl", body: "Meshy app")
                 Divider()
                 userView("Ethan Lipnik", username: "EthanLipnik", body: "Original Acrylic app")
-                Divider()
-                userView("Nikita Patskov", username: "patskovn", body: "MeshGradient library")
             } label: {
                 Label("Credits", systemImage: "person.crop.square.filled.and.at.rectangle")
             }

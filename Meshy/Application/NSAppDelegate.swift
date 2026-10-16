@@ -67,13 +67,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.titleVisibility = .hidden
             window.titlebarAppearsTransparent = true
             window.isMovableByWindowBackground = true
-            window.contentView = NSHostingView(rootView: AboutView().frame(width: 300, height: 580))
+            window.contentView = NSHostingView(rootView: AboutView().frame(width: 300))
             aboutBoxWindowController = NSWindowController(window: window)
         }
 
         // Centre it on the screen the user is on (the window started at the bottom-left corner).
         if let window = aboutBoxWindowController?.window {
-            window.setContentSize(NSSize(width: 300, height: 580))
+            if let contentView = window.contentView {
+                window.setContentSize(contentView.fittingSize)
+            }
             let mouse = NSEvent.mouseLocation
             if let screen = NSScreen.screens.first(where: { NSMouseInRect(mouse, $0.frame, false) }) ?? NSScreen.main {
                 let visible = screen.visibleFrame
