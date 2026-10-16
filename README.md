@@ -1,8 +1,10 @@
-# Meshy
+<h1 align="center">Meshy</h1>
 
-<img src="Design/Meshy%20Icon%20256.png" alt="Meshy app icon" width="128" height="128">
+<p align="center">
+  <img src="Design/Meshy%20Icon%20256.png" alt="Meshy app icon" width="128" height="128">
+</p>
 
-Live mesh-gradient and video wallpapers for macOS.
+<p align="center">Live mesh-gradient and video wallpapers for macOS.</p>
 
 Meshy brings [Acrylic](https://github.com/EthanLipnik/Acrylic), Ethan Lipnik's fluid wallpaper
 engine, back to life. Meshy keeps the same idea (living, color-shifting mesh gradients and video
