@@ -329,9 +329,16 @@ class FluidViewModel: ObservableObject {
         let colors = colors
         try Task.checkCancellation()
 
+        // macOS's wallpaper agent keeps a full-size bitmap of every desktop picture it is given and
+        // never deletes them, so a new snapshot per palette added ~8 MB each time at 1920 px. A
+        // smooth gradient scaled up from a small image looks the same (grain is left out).
+        let screenSize = NSScreen.screens.first { $0.uuidString == screenID }?.frame.size
+        let aspect = screenSize.map { $0.height / max($0.width, 1) } ?? 9 / 16
+        let snapshotSize = MeshSize(width: 320, height: max(Int((320 * aspect).rounded()), 1))
+
         try await DesktopSnapshot.set(for: screenID) { url in
             if (UserDefaults.standard.object(forKey: "shouldColorMatchFWMenuBar") as? Bool) ?? true {
-                _ = try await colors.export(to: url)
+                _ = try await colors.export(to: url, size: snapshotSize, grainAlpha: 0)
             } else {
                 let image = NSImage(color: NSColor.black, size: NSSize(width: 10, height: 10))
                 try image.pngData?.write(to: url)
