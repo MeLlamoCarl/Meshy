@@ -37,6 +37,21 @@ first time you open it macOS says it can't verify the developer:
 You only need to do this once. To check your download, compare `shasum -a 256 Meshy-x.y.z.dmg` with
 the checksum in the release notes.
 
+### Wallpaper cache
+
+Meshy sets a still picture of the current wallpaper as your desktop picture, which macOS uses for
+the menu bar, the lock screen and Mission Control. macOS keeps a cached copy of every desktop
+picture it is given and doesn't seem to clean them up. Versions before 1.0.1 set a new full-size
+picture on every color change, which could add up to many gigabytes. Meshy now uses small pictures
+for Fluid wallpapers and reuses one picture per video, so the cache grows much more slowly.
+
+Apps can't clean this cache, but it is safe to delete. In Finder, choose **Go › Go to Folder…**,
+paste the path below and delete the `.bmp` files inside. macOS recreates the ones it needs.
+
+```
+~/Library/Containers/com.apple.wallpaper.agent/Data/Library/Caches/com.apple.wallpaper.caches/extension-com.apple.wallpaper.extension.image
+```
+
 ## Building
 
 ```bash
