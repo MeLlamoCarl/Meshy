@@ -65,10 +65,9 @@ final class VideoDownloadService: ObservableObject {
 
     func delete(_ video: Video) throws {
         downloadingVideos.removeValue(forKey: video)
-        try FileManager.default.trashItem(
-            at: folder.appendingPathComponent("\(video.id).mp4"),
-            resultingItemURL: nil
-        )
+        let file = folder.appendingPathComponent("\(video.id).mp4")
+        try FileManager.default.trashItem(at: file, resultingItemURL: nil)
+        try? FileManager.default.removeItem(at: DesktopSnapshot.videoFrameURL(for: file))
         NotificationCenter.default.post(name: .videosChanged, object: nil)
     }
 

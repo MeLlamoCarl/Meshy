@@ -83,6 +83,7 @@ class VideosViewModel: ObservableObject {
         }
 
         try FileManager.default.trashItem(at: video.fileUrl, resultingItemURL: nil)
+        try? FileManager.default.removeItem(at: DesktopSnapshot.videoFrameURL(for: video.fileUrl))
         NotificationCenter.default.post(name: .videosChanged, object: nil)
     }
 

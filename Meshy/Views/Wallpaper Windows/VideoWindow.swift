@@ -58,14 +58,16 @@ class VideoWindow: WallpaperWindow {
 
         if let videoFile {
             let screenID = screenID
+            let hasFrame = FileManager.default.fileExists(atPath: DesktopSnapshot.videoFrameURL(for: videoFile).path)
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                guard let image = self?.imageFromVideo(url: videoFile, at: 2) else { return }
+                let image = hasFrame ? nil : self?.imageFromVideo(url: videoFile, at: 2)
+                guard hasFrame || image != nil else { return }
                 Task { @MainActor [weak self] in
                     // Skip if this window was already replaced by another wallpaper.
                     guard let self, self.isVisible else { return }
                     do {
-                        try await DesktopSnapshot.set(for: screenID) { url in
-                            try image.pngWrite(to: url)
+                        try await DesktopSnapshot.setVideoFrame(of: videoFile, for: screenID) { url in
+                            try image?.pngWrite(to: url)
                         }
                     } catch {
                         print(error)

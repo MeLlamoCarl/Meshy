@@ -43,8 +43,37 @@ enum DesktopSnapshot {
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         try NSWorkspace.shared.setDesktopImageURL(url, for: screen)
 
+        removeSnapshots(in: screenFolder, except: url)
+    }
+
+    /// Video frames are kept at full size under a fixed name per video and written only once.
+    /// macOS's wallpaper agent keeps a bitmap of every desktop picture (keyed by file and
+    /// modification date) and never deletes them, so reusing the same file means each video
+    /// costs one cached bitmap instead of a new one (up to ~33 MB at 4K) every time it starts.
+    nonisolated static var videoFramesFolder: URL {
+        AppPaths.caches.appendingPathComponent("Video Frames", isDirectory: true)
+    }
+
+    nonisolated static func videoFrameURL(for videoFile: URL) -> URL {
+        videoFramesFolder.appendingPathComponent(videoFile.lastPathComponent + ".png")
+    }
+
+    /// Shows the video's saved frame, writing it first if it doesn't exist yet.
+    static func setVideoFrame(of videoFile: URL, for screenID: String, write: (URL) async throws -> Void) async throws {
+        guard let screen = NSScreen.screens.first(where: { $0.uuidString == screenID }) else { return }
+        let url = videoFrameURL(for: videoFile)
+        if !FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.createDirectory(at: videoFramesFolder, withIntermediateDirectories: true)
+            try await write(url)
+            guard FileManager.default.fileExists(atPath: url.path) else { return }
+        }
+        try NSWorkspace.shared.setDesktopImageURL(url, for: screen)
+        removeSnapshots(in: folder.appendingPathComponent(screenID, isDirectory: true), except: nil)
+    }
+
+    private static func removeSnapshots(in screenFolder: URL, except kept: URL?) {
         let older = (try? FileManager.default.contentsOfDirectory(at: screenFolder, includingPropertiesForKeys: nil)) ?? []
-        for file in older where file.lastPathComponent != url.lastPathComponent {
+        for file in older where file.lastPathComponent != kept?.lastPathComponent {
             try? FileManager.default.removeItem(at: file)
         }
     }
@@ -288,10 +317,12 @@ class WallpaperService: ObservableObject {
     }
 
     /// Files Meshy writes as desktop pictures (snapshots of the live wallpaper) live in the
-    /// temporary directory; they are never the user's own picture.
+    /// temporary directory or, for video frames, in Meshy's caches; they are never the user's
+    /// own picture.
     private static func isMeshySnapshot(_ url: URL) -> Bool {
-        url.standardizedFileURL.resolvingSymlinksInPath().path
-            .hasPrefix(FileManager.default.temporaryDirectory.resolvingSymlinksInPath().path)
+        let path = url.standardizedFileURL.resolvingSymlinksInPath().path
+        return [FileManager.default.temporaryDirectory, DesktopSnapshot.videoFramesFolder]
+            .contains { path.hasPrefix($0.resolvingSymlinksInPath().path) }
     }
 
     private func rememberDesktopPicture(_ screen: NSScreen) {
