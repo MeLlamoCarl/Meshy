@@ -6,6 +6,12 @@
 
 <p align="center">Live mesh-gradient, liquid and video wallpapers for macOS.</p>
 
+
+
+https://github.com/user-attachments/assets/469142ac-2965-4424-af55-a3d834824252
+
+
+
 Meshy brings [Acrylic](https://github.com/EthanLipnik/Acrylic), Ethan Lipnik's fluid wallpaper
 engine, back to life. Meshy keeps the same idea (living, color-shifting mesh gradients and video
 wallpapers right on your desktop) working on newer versions of macOS, with a few small tweaks and
