@@ -6,8 +6,6 @@
 
 <p align="center">Live mesh-gradient, liquid and video wallpapers for macOS.</p>
 
-
-
 https://github.com/user-attachments/assets/469142ac-2965-4424-af55-a3d834824252
 
 
