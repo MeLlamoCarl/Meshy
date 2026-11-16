@@ -5,6 +5,7 @@
 //  Created by Ethan Lipnik on 8/8/22.
 //
 
+import FlowKit
 import MeshKit
 import SwiftUI
 
@@ -26,10 +27,17 @@ extension ContentView {
         private var isHoldingRandomizeButton: Bool = false
         @State
         private var customWallpapers: [CustomWallpaperConfig] = []
+        @State
+        private var customFlows: [FlowCustomConfig] = []
+        @ObservedObject
+        private var flowThumbnails = FlowThumbnails.shared
 
         var selectedHue: Hue? { wallpaperService.targetSelection.hue }
         var selectedCustomID: UUID? { wallpaperService.targetSelection.customID }
-        var isRandomSelected: Bool { isFluid && wallpaperService.targetSelection == .random }
+        var isRandomSelected: Bool {
+            (isFluid && wallpaperService.targetSelection == .random)
+                || (isFlow && wallpaperService.targetFlowSelection == .random)
+        }
         /// Mouse wheels can't scroll sideways: with a mouse, reveal the native scroll bar on hover.
         var revealsScroller: Bool { mouseMonitor.isExternalMouseConnected }
 
@@ -42,6 +50,10 @@ extension ContentView {
             selectedWallpaper == .fluid
         }
 
+        var isFlow: Bool {
+            selectedWallpaper == .flow
+        }
+
         var body: some View {
             VStack(spacing: 0) {
                 // Presets section header
@@ -50,8 +62,14 @@ extension ContentView {
                         .font(.caption.bold())
                         .foregroundStyle(.secondary)
                     Spacer()
-                    if isFluid && wallpaperService.screens.count > 1 {
+                    if wallpaperService.screens.count > 1 {
+                        // Videos play on every screen, so there's no picker for them; it's only
+                        // hidden there, keeping the header (and the popover) the same height.
+                        let showsPicker = isFluid || isFlow
                         screenPicker
+                            .opacity(showsPicker ? 1 : 0)
+                            .disabled(!showsPicker)
+                            .accessibilityHidden(!showsPicker)
                     }
                 }
                 .padding(.horizontal)
@@ -104,6 +122,21 @@ extension ContentView {
                                         }
                             }
                             importVideoButton
+
+                        case .flow:
+                            ForEach(FlowPreset.all) { preset in
+                                FlowPresetItem(
+                                    title: preset.name,
+                                    image: flowThumbnails.image(for: "preset-\(preset.name)", palette: preset.palette,
+                                                                settings: .default),
+                                    palette: preset.palette,
+                                    isSelected: wallpaperService.targetFlowSelection == .preset(preset.name)
+                                )
+                                .onTapGesture {
+                                    guard !wallpaperService.isLoading else { return }
+                                    wallpaperService.selectFlowForTarget(.preset(preset.name))
+                                }
+                            }
                         case .none:
                             EmptyView()
                         }
@@ -111,13 +144,26 @@ extension ContentView {
                     .padding()
                     .horizontalWheelScrolling(revealsScroller: revealsScroller)
                 }
+                // A new row per wallpaper type, so switching crossfades instead of morphing.
+                .id(selectedWallpaper)
+                .transition(.opacity)
                 .frame(height: 86)
                 .background { Color.black.opacity(0.5).blendMode(.overlay) }
 
                 // Customs row (fluid only, when customs exist)
                 if isFluid && !customWallpapers.isEmpty {
-                    Divider()
-                    customsRow
+                    VStack(spacing: 0) {
+                        Divider()
+                        customsRow
+                    }
+                    .transition(.opacity)
+                }
+                if isFlow && !customFlows.isEmpty {
+                    VStack(spacing: 0) {
+                        Divider()
+                        flowCustomsRow
+                    }
+                    .transition(.opacity)
                 }
             }
             .onReceive(popoverNotification) { _ in
@@ -202,6 +248,42 @@ extension ContentView {
             .background { Color.black.opacity(0.3).blendMode(.overlay) }
         }
 
+        var flowCustomsRow: some View {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack {
+                    Text("Customs")
+                        .font(.caption.bold())
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal)
+                        .padding(.top, 6)
+                    Spacer()
+                }
+                ScrollView(.horizontal) {
+                    LazyHStack(alignment: .center) {
+                        ForEach(customFlows) { config in
+                            FlowPresetItem(
+                                title: config.name,
+                                image: flowThumbnails.image(for: config.snapshotKey, palette: config.palette,
+                                                            settings: config.settings),
+                                palette: config.palette,
+                                isSelected: wallpaperService.targetFlowSelection == .custom(config.id)
+                            )
+                            .frame(height: 54)
+                            .onTapGesture {
+                                guard !wallpaperService.isLoading else { return }
+                                wallpaperService.selectFlowForTarget(.custom(config.id))
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                    .horizontalWheelScrolling(revealsScroller: revealsScroller)
+                }
+                .frame(height: 70)
+            }
+            .background { Color.black.opacity(0.3).blendMode(.overlay) }
+        }
+
         // MARK: - Randomize button
 
         var randomizeButton: some View {
@@ -232,6 +314,8 @@ extension ContentView {
                     case .video:
                         currentBackgroundVideoFile = videosViewModel.videos.randomElement()?.fileUrl.lastPathComponent ?? ""
                         videosViewModel.updateWallpaper()
+                    case .flow:
+                        wallpaperService.selectFlowForTarget(.random)
                     case .none:
                         break
                     }
@@ -283,6 +367,7 @@ extension ContentView {
 
         func loadCustomWallpapers() {
             customWallpapers = CustomWallpaperConfig.loadAll()
+            customFlows = FlowCustomConfig.loadAll()
         }
     }
 }
@@ -324,6 +409,57 @@ private struct PalettePresetItem: View {
 
     var gradient: LinearGradient {
         LinearGradient(colors: hue.previewColors, startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+}
+
+// MARK: - Flow preset item
+
+/// A Flow preset or custom: its rendered still (a gradient of its colors until that's ready).
+private struct FlowPresetItem: View {
+    let title: String
+    let image: NSImage?
+    let palette: FlowPalette
+    let isSelected: Bool
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .fill(placeholder)
+            .aspectRatio(16 / 10, contentMode: .fit)
+            .overlay {
+                if let image {
+                    Image(nsImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .transition(.opacity)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                LinearGradient(colors: [.clear, .black.opacity(0.45)], startPoint: .center, endPoint: .bottom)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            )
+            .overlay(
+                isSelected
+                    ? RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(SwiftUI.Color.accentColor, lineWidth: 4)
+                    : nil
+            )
+            .overlay(
+                Text(title)
+                    .font(.caption.bold())
+                    .foregroundColor(.white)
+                    .padding(6),
+                alignment: .bottomLeading
+            )
+            .shadow(radius: 8, y: 8)
+            .animation(.easeInOut(duration: 0.3), value: image != nil)
+    }
+
+    var placeholder: RadialGradient {
+        RadialGradient(
+            colors: [palette.drops[0], palette.halo, palette.background].map { SwiftUI.Color(cgColor: $0.cgColor) },
+            center: .center, startRadius: 4, endRadius: 50
+        )
     }
 }
 

@@ -38,6 +38,8 @@ final class StatusBarController {
             }.frame(width: 300)
 
             let viewController = NSHostingController(rootView: contentView)
+            // Follow the SwiftUI content's size both ways (growing and shrinking).
+            viewController.sizingOptions = .preferredContentSize
             let popover = NSPopover()
             popover.contentViewController = viewController
             popover.contentSize = NSSize(width: 300, height: 300)

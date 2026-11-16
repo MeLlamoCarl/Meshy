@@ -7,6 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F100A66B50C3CC9DD7D20692 /* FlowKit in Frameworks */ = {isa = PBXBuildFile; productRef = F103C5D51B0CF566D55A91A3 /* FlowKit */; };
+		F10040C961A052E2F6D8D897 /* FlowEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10A05DB3C534D8D365981A7 /* FlowEditorView.swift */; };
+		F1035802393B3535FA6D4E66 /* SettingsView+FlowWallpaperView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F102B717A0BED10DDC23DB39 /* SettingsView+FlowWallpaperView.swift */; };
+		F10EDB17BA7D31C5C646CE1E /* FlowWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F103FE6DF24E9C1C87105218 /* FlowWindow.swift */; };
+		F10F2767047E3CAA48AD3B96 /* FlowThumbnails.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10ED884ADCEFC66BC435346 /* FlowThumbnails.swift */; };
+		F10AC4CA2189356FB123B24F /* FlowCustomConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = F101D818CBB3DBE46A9B32F2 /* FlowCustomConfig.swift */; };
+		F10B69725C24EA26C8AC0CCA /* FlowViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1004BFEC693198DC6559E1E /* FlowViewModel.swift */; };
 		AA0B119828FDDBEE0086277A /* URL+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0B119728FDDBEE0086277A /* URL+Extensions.swift */; };
 		AA0EA86228933069003CEB51 /* ScreenSaverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0EA86128933069003CEB51 /* ScreenSaverView.swift */; };
 		AA108BBF289C1A25009C50A5 /* FluidWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA108BBE289C1A25009C50A5 /* FluidWindow.swift */; };
@@ -79,6 +86,13 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F1082D7B1ABA48E6FCD256D7 /* FlowKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = FlowKit; sourceTree = "<group>"; };
+		F10A05DB3C534D8D365981A7 /* FlowEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowEditorView.swift; sourceTree = "<group>"; };
+		F102B717A0BED10DDC23DB39 /* SettingsView+FlowWallpaperView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView+FlowWallpaperView.swift"; sourceTree = "<group>"; };
+		F103FE6DF24E9C1C87105218 /* FlowWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowWindow.swift; sourceTree = "<group>"; };
+		F10ED884ADCEFC66BC435346 /* FlowThumbnails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowThumbnails.swift; sourceTree = "<group>"; };
+		F101D818CBB3DBE46A9B32F2 /* FlowCustomConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowCustomConfig.swift; sourceTree = "<group>"; };
+		F1004BFEC693198DC6559E1E /* FlowViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowViewModel.swift; sourceTree = "<group>"; };
 		AA0B119728FDDBEE0086277A /* URL+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "URL+Extensions.swift"; sourceTree = "<group>"; };
 		AA0EA86128933069003CEB51 /* ScreenSaverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenSaverView.swift; sourceTree = "<group>"; };
 		AA108BBE289C1A25009C50A5 /* FluidWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FluidWindow.swift; sourceTree = "<group>"; };
@@ -146,6 +160,7 @@
 				AA50940428A19FC4007B1F30 /* SDWebImageSwiftUI in Frameworks */,
 				AA42606A28C7D56300B67DE1 /* PixabayKit in Frameworks */,
 				AA7C865A2893576B00D3469E /* MeshKit in Frameworks */,
+				F100A66B50C3CC9DD7D20692 /* FlowKit in Frameworks */,
 				AADED2822898DD880023EB97 /* ServiceManagement.framework in Frameworks */,
 				AAE1101C28FDA17A0066B6E3 /* ZIPFoundation in Frameworks */,
 			);
@@ -154,6 +169,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		F10422D46748FEFA3625BA4D /* FlowEditor */ = {
+			isa = PBXGroup;
+			children = (
+				F10A05DB3C534D8D365981A7 /* FlowEditorView.swift */,
+			);
+			path = FlowEditor;
+			sourceTree = "<group>";
+		};
 		AA0B119028FDB84A0086277A /* Application */ = {
 			isa = PBXGroup;
 			children = (
@@ -196,6 +219,7 @@
 		AA1F48E12899C1B8009E07A8 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				F10422D46748FEFA3625BA4D /* FlowEditor */,
 				AA6BD42F28981EA2007AD3ED /* StatusBarController.swift */,
 				AA0EA86128933069003CEB51 /* ScreenSaverView.swift */,
 				AA1F48E42899C301009E07A8 /* AboutView.swift */,
@@ -215,6 +239,9 @@
 		AA1F48E32899C1CB009E07A8 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				F10ED884ADCEFC66BC435346 /* FlowThumbnails.swift */,
+				F101D818CBB3DBE46A9B32F2 /* FlowCustomConfig.swift */,
+				F1004BFEC693198DC6559E1E /* FlowViewModel.swift */,
 				AA0B119328FDB8890086277A /* Services */,
 				AA427C0028A09EFA009F9C44 /* WallpaperType.swift */,
 				AADED2552898CE750023EB97 /* AnimationSpeed.swift */,
@@ -242,6 +269,7 @@
 		AA278947289C5A59001E897B /* Wallpaper Windows */ = {
 			isa = PBXGroup;
 			children = (
+				F103FE6DF24E9C1C87105218 /* FlowWindow.swift */,
 				AA108BBE289C1A25009C50A5 /* FluidWindow.swift */,
 				AA278948289C5AC8001E897B /* VideoWindow.swift */,
 				AA3B814B2896D8C20092D06A /* WallpaperWindow.swift */,
@@ -322,6 +350,7 @@
 		AA749C7428931F63002CD39A /* Packages */ = {
 			isa = PBXGroup;
 			children = (
+				F1082D7B1ABA48E6FCD256D7 /* FlowKit */,
 				AA9533C9297B021B002A4028 /* MeshKit */,
 				AA9533CA297B0221002A4028 /* PixabayKit */,
 			);
@@ -348,6 +377,7 @@
 		AAAE6365289E017B000ED2F0 /* SettingsView */ = {
 			isa = PBXGroup;
 			children = (
+				F102B717A0BED10DDC23DB39 /* SettingsView+FlowWallpaperView.swift */,
 				AA455E39289826030010938A /* SettingsView.swift */,
 				AAAE6366289EA290000ED2F0 /* SettingsView+GeneralView.swift */,
 				AAAE6368289EA351000ED2F0 /* SettingsView+FluidWallpaperView.swift */,
@@ -396,6 +426,7 @@
 			name = Meshy;
 			packageProductDependencies = (
 				AA7C86592893576B00D3469E /* MeshKit */,
+				F103C5D51B0CF566D55A91A3 /* FlowKit */,
 				AA50940328A19FC4007B1F30 /* SDWebImageSwiftUI */,
 				AA42606928C7D56300B67DE1 /* PixabayKit */,
 				AAE1101B28FDA17A0066B6E3 /* ZIPFoundation */,
@@ -459,6 +490,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F10040C961A052E2F6D8D897 /* FlowEditorView.swift in Sources */,
+				F1035802393B3535FA6D4E66 /* SettingsView+FlowWallpaperView.swift in Sources */,
+				F10EDB17BA7D31C5C646CE1E /* FlowWindow.swift in Sources */,
+				F10F2767047E3CAA48AD3B96 /* FlowThumbnails.swift in Sources */,
+				F10AC4CA2189356FB123B24F /* FlowCustomConfig.swift in Sources */,
+				F10B69725C24EA26C8AC0CCA /* FlowViewModel.swift in Sources */,
 				AA427C0128A09EFA009F9C44 /* WallpaperType.swift in Sources */,
 				AAF6747528A42E6B00044BFD /* OnboardingView+VideoView.swift in Sources */,
 				AACCD492289DA6A3006551C1 /* VideosManagementView.swift in Sources */,
@@ -766,6 +803,10 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		F103C5D51B0CF566D55A91A3 /* FlowKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FlowKit;
+		};
 		AA42606928C7D56300B67DE1 /* PixabayKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = PixabayKit;

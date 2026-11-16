@@ -4,3 +4,6 @@
 [submodule "PixabayKit"]
 	path = PixabayKit
 	url = https://github.com/MeLlamoCarl/PixabayKit.git
+[submodule "FlowKit"]
+	path = FlowKit
+	url = https://github.com/MeLlamoCarl/FlowKit.git

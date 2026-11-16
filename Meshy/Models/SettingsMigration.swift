@@ -4,6 +4,7 @@
 //
 
 import AppKit
+import FlowKit
 import Foundation
 import ServiceManagement
 
@@ -13,6 +14,7 @@ enum SettingsMigration {
     static func run() {
         LaunchAtLogin.migrate()
         validateFluidSelections()
+        validateFlowSelections()
         validateStoredSettings()
 
         let info = Bundle.main.infoDictionary
@@ -39,6 +41,24 @@ enum SettingsMigration {
         }
     }
 
+    /// Drops per-screen Flow selections pointing at deleted customs or unknown presets.
+    private static func validateFlowSelections() {
+        let defaults = UserDefaults.standard
+        let key = WallpaperService.flowSelectionsKey
+        guard let stored = defaults.dictionary(forKey: key) as? [String: String] else { return }
+        let customIDs = Set(FlowCustomConfig.loadAll().map(\.id))
+        let validated = stored.mapValues { value -> String in
+            let selection = FlowSelection(storageValue: value) // unknown presets → random
+            if let id = selection.customID, !customIDs.contains(id) {
+                return FlowSelection.random.storageValue
+            }
+            return selection.storageValue
+        }
+        if validated != stored {
+            defaults.set(validated, forKey: key)
+        }
+    }
+
     /// Removes out-of-range or unknown values so the app falls back to its defaults.
     private static func validateStoredSettings() {
         let defaults = UserDefaults.standard
@@ -61,6 +81,8 @@ enum SettingsMigration {
         validateNumber("FWCustomSpeed") { $0 >= 0 }
         validateNumber("FWFramerate") { $0 > 0 }
         validateNumber("FWPaletteChangeInterval") { $0 >= 5 }
+        validateNumber("FlowSpeed") { FlowSettings.speedRange.contains($0) }
+        validateNumber("FlowFramerate") { $0 > 0 }
 
         validateRawValue("FWAnimationSpeed") { AnimationSpeed(rawValue: $0) != nil }
         validateRawValue("FWColorScheme") { WallpaperColorScheme(rawValue: $0) != nil }

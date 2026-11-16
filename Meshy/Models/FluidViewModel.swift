@@ -152,42 +152,7 @@ class FluidViewModel: ObservableObject {
     }
 
     private func isOtherAppFullScreen() -> Bool {
-        guard let screen = NSScreen.screens.first(where: { $0.uuidString == screenID }) ?? NSScreen.main,
-              let primaryScreen = NSScreen.screens.first else { return false }
-        // CGWindow bounds use a top-left origin relative to the primary screen.
-        let screenRect = CGRect(
-            x: screen.frame.minX,
-            y: primaryScreen.frame.maxY - screen.frame.maxY,
-            width: screen.frame.width,
-            height: screen.frame.height
-        )
-        let ownPID = ProcessInfo.processInfo.processIdentifier
-
-        let windowList = CGWindowListCopyWindowInfo(
-            [.optionOnScreenOnly, .excludeDesktopElements],
-            kCGNullWindowID
-        ) as? [[String: Any]] ?? []
-
-        for window in windowList {
-            guard
-                let pid = window[kCGWindowOwnerPID as String] as? Int32,
-                pid != ownPID,
-                let boundsDict = window[kCGWindowBounds as String] as? [String: CGFloat],
-                let layer = window[kCGWindowLayer as String] as? Int,
-                layer == 0  // normal window layer (not system overlays)
-            else { continue }
-
-            let windowRect = CGRect(
-                x: boundsDict["X"] ?? 0,
-                y: boundsDict["Y"] ?? 0,
-                width: boundsDict["Width"] ?? 0,
-                height: boundsDict["Height"] ?? 0
-            )
-            if windowRect.insetBy(dx: -1, dy: -1).contains(screenRect) {
-                return true
-            }
-        }
-        return false
+        GameMode.isOtherAppFullScreen(on: screenID)
     }
 
     func applyColors(_ newColors: MeshColorGrid) {

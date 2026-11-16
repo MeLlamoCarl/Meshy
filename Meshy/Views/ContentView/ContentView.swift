@@ -26,6 +26,8 @@ struct ContentView: View {
     var wallpaperService: WallpaperService = .shared
     @State
     var canStartVideo: Bool = false
+    @ObservedObject
+    private var mouseMonitor = MouseMonitor.shared
 
     let popoverNotification = NotificationCenter.default
         .publisher(for: NSNotification.Name("didOpenStatusBarItem"))
@@ -46,68 +48,30 @@ struct ContentView: View {
     }
 
     var body: some View {
+        // The popover takes this content's ideal height and animates to it (NSPopover's own
+        // resize). While it does, the rows stay anchored to the top, clipped by the moving edge,
+        // and the footer rides the bottom edge: nothing jumps or recenters mid-animation.
         VStack(spacing: 0) {
-            LazyVGrid(columns: [.init(.adaptive(minimum: 100), spacing: 15)], spacing: 15) {
-                ForEach([WallpaperType.fluid, WallpaperType.video], id: \.rawValue) { wallpaper in
-                    let actions: [WallpaperItem.Action] = {
-                        switch wallpaper {
-                        case .video:
-                            return [("Manage", {
-                                WindowManager.Videos.open()
-                            })]
-                        default:
-                            return []
-                        }
-                    }()
+            VStack(spacing: 0) {
+                wallpaperCarousel
 
-                    WallpaperItem(
-                        wallpaper: wallpaper,
-                        selectedWallpaper: $selectedWallpaper,
-                        canStart: wallpaper == .video ? canStartVideo : true,
-                        actions: actions
-                    ) {
-                        Task {
-                            do {
-                                if selectedWallpaper == wallpaper {
-                                    withAnimation {
-                                        selectedWallpaper = nil
-                                    }
-                                    try await wallpaperService.stop()
-                                } else {
-                                    withAnimation {
-                                        selectedWallpaper = wallpaper
-                                    }
-                                    try await wallpaperService.start(wallpaper)
-                                }
-                            } catch {
-                                print(error)
-                            }
-                            // Show what's actually running, even if starting failed.
-                            selectedWallpaper = wallpaperService.selectedWallpaper
-                        }
+                Group {
+                    if selectedWallpaper != nil {
+                        Divider()
+
+                        OptionsView(selectedWallpaper: $selectedWallpaper)
+                            .environmentObject(wallpaperService)
+                    } else {
+                        Text("Select a wallpaper type")
+                            .font(.title3.bold())
+                            .foregroundStyle(.secondary)
+                            .padding(.vertical, 24)
                     }
-                    .animation(.easeInOut(duration: 0.2), value: selectedWallpaper)
-                    .environmentObject(wallpaperService)
                 }
+                .transition(.opacity)
             }
-            .padding()
-
-            Spacer()
-
-            Group {
-                if selectedWallpaper != nil {
-                    Divider()
-
-                    OptionsView(selectedWallpaper: $selectedWallpaper)
-                        .environmentObject(wallpaperService)
-                } else {
-                    Text("Select a wallpaper type")
-                        .font(.title3.bold())
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                }
-            }
-            .transition(.opacity)
+            .frame(minHeight: 0, maxHeight: .infinity, alignment: .top)
+            .clipped()
 
             footer
         }
@@ -125,6 +89,86 @@ struct ContentView: View {
         }
     }
 
+    /// Matches the popover's own resize animation, so the rows fade while its edge moves.
+    static let resizeAnimation = Animation.easeInOut(duration: 0.25)
+
+    /// Fluid, Flow and Video in a horizontally scrolling row.
+    var wallpaperCarousel: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 14) {
+                    ForEach([WallpaperType.fluid, WallpaperType.flow, WallpaperType.video], id: \.rawValue) { wallpaper in
+                        wallpaperItem(wallpaper)
+                            .frame(width: 122)
+                            .id(wallpaper)
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 14) // room for the tiles' shadows
+                .horizontalWheelScrolling(revealsScroller: mouseMonitor.isExternalMouseConnected)
+            }
+            // Keep its full height: otherwise the row gets squeezed (cutting the tiles) when the
+            // options below grow, e.g. the Customs row, instead of the popover growing.
+            .fixedSize(horizontal: false, vertical: true)
+            .onAppear { scrollToSelected(proxy, animated: false) }
+            .onReceive(popoverNotification) { _ in scrollToSelected(proxy, animated: false) }
+        }
+    }
+
+    private func scrollToSelected(_ proxy: ScrollViewProxy, animated: Bool) {
+        guard let wallpaper = wallpaperService.selectedWallpaper ?? selectedWallpaper else { return }
+        DispatchQueue.main.async {
+            if animated {
+                withAnimation { proxy.scrollTo(wallpaper, anchor: .center) }
+            } else {
+                proxy.scrollTo(wallpaper, anchor: .center)
+            }
+        }
+    }
+
+    @ViewBuilder
+    func wallpaperItem(_ wallpaper: WallpaperType) -> some View {
+        let actions: [WallpaperItem.Action] = {
+            switch wallpaper {
+            case .video:
+                return [("Manage", {
+                    WindowManager.Videos.open()
+                })]
+            default:
+                return []
+            }
+        }()
+
+        WallpaperItem(
+            wallpaper: wallpaper,
+            selectedWallpaper: $selectedWallpaper,
+            canStart: wallpaper == .video ? canStartVideo : true,
+            actions: actions
+        ) {
+            Task {
+                do {
+                    if selectedWallpaper == wallpaper {
+                        withAnimation(Self.resizeAnimation) {
+                            selectedWallpaper = nil
+                        }
+                        try await wallpaperService.stop()
+                    } else {
+                        withAnimation(Self.resizeAnimation) {
+                            selectedWallpaper = wallpaper
+                        }
+                        try await wallpaperService.start(wallpaper)
+                    }
+                } catch {
+                    print(error)
+                }
+                // Show what's actually running, even if starting failed.
+                selectedWallpaper = wallpaperService.selectedWallpaper
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: selectedWallpaper)
+        .environmentObject(wallpaperService)
+    }
+
     func updateCanStartVideo() {
         let folder = AppPaths.videos
 
@@ -140,20 +184,31 @@ struct ContentView: View {
     }
 
     var selectedCustomID: UUID? {
-        wallpaperService.targetSelection.customID
+        switch selectedWallpaper {
+        case .fluid: return wallpaperService.targetSelection.customID
+        case .flow: return wallpaperService.targetFlowSelection.customID
+        default: return nil
+        }
     }
 
     var isFluid: Bool {
         selectedWallpaper == .fluid
     }
 
-    var hasSelectedCustom: Bool {
-        selectedCustomID != nil && isFluid
+    var isFlow: Bool {
+        selectedWallpaper == .flow
     }
 
-    var selectedCustomConfig: CustomWallpaperConfig? {
+    var hasSelectedCustom: Bool {
+        selectedCustomID != nil && (isFluid || isFlow)
+    }
+
+    /// Name of the selected custom (Fluid or Flow), for renaming.
+    var selectedCustomName: String? {
         guard let id = selectedCustomID else { return nil }
-        return CustomWallpaperConfig.loadAll().first { $0.id == id }
+        return isFlow
+            ? FlowCustomConfig.loadAll().first { $0.id == id }?.name
+            : CustomWallpaperConfig.loadAll().first { $0.id == id }?.name
     }
 
     var footer: some View {
@@ -187,8 +242,13 @@ struct ContentView: View {
                     }
                 }
 
-                Button("Create Custom...") {
+                Button("Create Custom Fluid...") {
                     WindowManager.FluidEditor.open()
+                }
+
+                Button("Create Custom Flow...") {
+                    FlowEditorState.shared.prepareNew()
+                    WindowManager.FlowEditor.open()
                 }
 
                 Divider()
@@ -206,18 +266,27 @@ struct ContentView: View {
             // Custom wallpaper management button — always a Menu, disabled when nothing selected
             Menu {
                 Button("Edit") {
-                    WindowManager.FluidEditor.open()
+                    if isFlow, let id = selectedCustomID {
+                        FlowEditorState.shared.prepareEditing(id)
+                        WindowManager.FlowEditor.open()
+                    } else {
+                        WindowManager.FluidEditor.open()
+                    }
                 }
 
                 Button("Rename") {
-                    renameText = selectedCustomConfig?.name ?? ""
+                    renameText = selectedCustomName ?? ""
                     showRenameAlert = true
                 }
 
                 Divider()
 
                 Button("Delete", role: .destructive) {
-                    if let id = selectedCustomID {
+                    guard let id = selectedCustomID else { return }
+                    if isFlow {
+                        FlowCustomConfig.delete(id: id)
+                        wallpaperService.customFlowDeleted(id)
+                    } else {
                         CustomWallpaperConfig.delete(id: id)
                         wallpaperService.customWallpaperDeleted(id)
                         NotificationCenter.default.post(name: .customWallpapersChanged, object: nil)
@@ -244,7 +313,7 @@ struct ContentView: View {
 
                 Toggle("Pause when app is fullscreen", isOn: $pauseOnGameMode)
                     .onChange(of: pauseOnGameMode) { _ in
-                        wallpaperService.fluidViewModels.forEach { $0.updatePauseState() }
+                        wallpaperService.updatePauseStates()
                     }
 
                 Button {
@@ -280,8 +349,12 @@ struct ContentView: View {
             Button("Save") {
                 let trimmed = renameText.trimmingCharacters(in: .whitespaces)
                 if let id = selectedCustomID, !trimmed.isEmpty {
-                    CustomWallpaperConfig.rename(id: id, newName: trimmed)
-                    NotificationCenter.default.post(name: .customWallpapersChanged, object: nil)
+                    if isFlow {
+                        FlowCustomConfig.rename(id: id, newName: trimmed)
+                    } else {
+                        CustomWallpaperConfig.rename(id: id, newName: trimmed)
+                        NotificationCenter.default.post(name: .customWallpapersChanged, object: nil)
+                    }
                 }
             }
             Button("Cancel", role: .cancel) {}

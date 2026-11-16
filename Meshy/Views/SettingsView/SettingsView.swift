@@ -39,6 +39,15 @@ struct SettingsView: View {
                 Label("Video", systemImage: "play.rectangle.fill")
             }
             .tag(2)
+
+            FormView {
+                FlowWallpaperView()
+            }
+            .frame(height: 560)
+            .tabItem {
+                Label("Flow", systemImage: "drop.fill")
+            }
+            .tag(3)
         }
     }
 

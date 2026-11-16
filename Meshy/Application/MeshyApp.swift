@@ -81,6 +81,7 @@ struct MeshyApp: App {
 
         meshCreatorWindow
         fluidEditorWindow
+        flowEditorWindow
     }
 
     var meshCreatorWindow: some Scene {
@@ -152,6 +153,27 @@ struct MeshyApp: App {
         .handlesExternalEvents(matching: Set(arrayLiteral: WindowManager.FluidEditor.rawValue))
         .windowToolbarStyle(.unifiedCompact)
     }
+
+    var flowEditorWindow: some Scene {
+        WindowGroup("Flow Editor") {
+            FlowEditorView()
+                .navigationTitle("Meshy – Flow Editor")
+                .onDisappear {
+                    if NSApp.windows.compactMap(\.identifier)
+                        .filter({
+                            $0.rawValue.hasPrefix("SwiftUI") || $0.rawValue.hasPrefix("Meshy") })
+                        .count == 0
+                    {
+                        NSApp.setActivationPolicy(.accessory)
+                    }
+                }
+                .onAppear {
+                    NSApp.setActivationPolicy(.regular)
+                }
+        }
+        .handlesExternalEvents(matching: Set(arrayLiteral: WindowManager.FlowEditor.rawValue))
+        .windowToolbarStyle(.unifiedCompact)
+    }
 }
 
 enum WindowManager: String, CaseIterable {
@@ -159,6 +181,7 @@ enum WindowManager: String, CaseIterable {
     case MeshCreator = "MeshCreatorView"
     case Videos = "VideosView"
     case FluidEditor = "FluidEditorView"
+    case FlowEditor = "FlowEditorView"
 
     func open(query: URLQueryItem...) {
         var urlComponents = URLComponents(string: urlStr)

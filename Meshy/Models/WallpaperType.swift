@@ -10,6 +10,7 @@ import Foundation
 enum WallpaperType: String, CaseIterable {
     case fluid
     case video
+    case flow
 
     var displayTitle: String {
         switch self {
@@ -17,6 +18,8 @@ enum WallpaperType: String, CaseIterable {
             return "Fluid"
         case .video:
             return "Video"
+        case .flow:
+            return "Flow"
         }
     }
 }

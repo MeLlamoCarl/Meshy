@@ -71,6 +71,42 @@ enum DesktopSnapshot {
         removeSnapshots(in: folder.appendingPathComponent(screenID, isDirectory: true), except: nil)
     }
 
+    /// Flow stills, rendered once per palette and screen size (see `FlowViewModel`).
+    nonisolated static var flowStillsFolder: URL {
+        AppPaths.caches.appendingPathComponent("Flow Stills", isDirectory: true)
+    }
+
+    /// Shows the still named `key` at the screen's size, rendering it first if it doesn't exist.
+    /// Older stills of the same custom (edited since) are deleted.
+    static func setFlowStill(key: String, for screenID: String, write: (URL, CGSize) async throws -> Void) async throws {
+        guard let screen = NSScreen.screens.first(where: { $0.uuidString == screenID }) else { return }
+        // macOS's wallpaper agent caches each picture as a bitmap at its own size (~30 MB at
+        // 3456 px); Flow is soft gradients, so 1280 px wide looks the same scaled up.
+        let width = min(screen.frame.width * screen.backingScaleFactor, 1280)
+        let size = CGSize(width: width.rounded(), height: (width * screen.frame.height / max(screen.frame.width, 1)).rounded())
+        let url = flowStillsFolder.appendingPathComponent("\(key)-\(Int(size.width))x\(Int(size.height)).png")
+        if !FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.createDirectory(at: flowStillsFolder, withIntermediateDirectories: true)
+            try await write(url, size)
+            guard FileManager.default.fileExists(atPath: url.path) else { return }
+            if key.hasPrefix("custom-") {
+                let custom = String(key.prefix("custom-".count + 36)) // custom-<UUID>
+                removeFlowStills(prefix: custom, keeping: key)
+            }
+        }
+        try NSWorkspace.shared.setDesktopImageURL(url, for: screen)
+        removeSnapshots(in: folder.appendingPathComponent(screenID, isDirectory: true), except: nil)
+    }
+
+    /// Deletes Flow stills whose name starts with `prefix`, except those of `kept`.
+    nonisolated static func removeFlowStills(prefix: String, keeping kept: String? = nil) {
+        let files = (try? FileManager.default.contentsOfDirectory(at: flowStillsFolder, includingPropertiesForKeys: nil)) ?? []
+        for file in files where file.lastPathComponent.hasPrefix(prefix) {
+            if let kept, file.lastPathComponent.hasPrefix(kept + "-") { continue }
+            try? FileManager.default.removeItem(at: file)
+        }
+    }
+
     private static func removeSnapshots(in screenFolder: URL, except kept: URL?) {
         let older = (try? FileManager.default.contentsOfDirectory(at: screenFolder, includingPropertiesForKeys: nil)) ?? []
         for file in older where file.lastPathComponent != kept?.lastPathComponent {
@@ -84,6 +120,7 @@ class WallpaperService: ObservableObject {
     static let shared = WallpaperService()
 
     nonisolated private static let selectionsKey = "FWScreenSelections"
+    nonisolated static let flowSelectionsKey = "FlowScreenSelections"
     private static let originalPicturesKey = "originalDesktopPictures"
 
     /// One wallpaper window per connected screen, keyed by `NSScreen.uuidString`.
@@ -109,6 +146,9 @@ class WallpaperService: ObservableObject {
     /// Fluid selection per screen (`NSScreen.uuidString` → selection).
     @Published
     private(set) var selections: [String: FluidSelection] = [:]
+    /// Flow selection per screen.
+    @Published
+    private(set) var flowSelections: [String: FlowSelection] = [:]
     /// Screen the menu bar popover is currently editing.
     @Published
     var targetScreenID: String?
@@ -135,9 +175,29 @@ class WallpaperService: ObservableObject {
         windowControllers.values.compactMap { ($0.window as? FluidWindow)?.viewModel }
     }
 
+    var targetFlowSelection: FlowSelection {
+        targetScreen.map { flowSelection(for: $0.uuidString) } ?? .random
+    }
+
+    var targetFlowViewModel: FlowViewModel? {
+        targetScreen.flatMap { (windowControllers[$0.uuidString]?.window as? FlowWindow)?.viewModel }
+    }
+
+    var flowViewModels: [FlowViewModel] {
+        windowControllers.values.compactMap { ($0.window as? FlowWindow)?.viewModel }
+    }
+
+    /// Re-checks every wallpaper's "pause when an app is full screen" state.
+    func updatePauseStates() {
+        fluidViewModels.forEach { $0.updatePauseState() }
+        flowViewModels.forEach { $0.updatePauseState() }
+    }
+
     init() {
         let stored = UserDefaults.standard.dictionary(forKey: Self.selectionsKey) as? [String: String] ?? [:]
         selections = stored.mapValues(FluidSelection.init(storageValue:))
+        let storedFlow = UserDefaults.standard.dictionary(forKey: Self.flowSelectionsKey) as? [String: String] ?? [:]
+        flowSelections = storedFlow.mapValues(FlowSelection.init(storageValue:))
 
         let storedPictures = UserDefaults.standard.dictionary(forKey: Self.originalPicturesKey) as? [String: String] ?? [:]
         originalDesktopPictures = storedPictures.mapValues { URL(fileURLWithPath: $0) }
@@ -215,6 +275,43 @@ class WallpaperService: ObservableObject {
         UserDefaults.standard.set(selections.mapValues(\.storageValue), forKey: Self.selectionsKey)
     }
 
+    // MARK: - Flow selections
+
+    nonisolated static func storedFlowSelection(for screenID: String) -> FlowSelection? {
+        let stored = UserDefaults.standard.dictionary(forKey: flowSelectionsKey) as? [String: String]
+        return stored?[screenID].map(FlowSelection.init(storageValue:))
+    }
+
+    func flowSelection(for screenID: String) -> FlowSelection {
+        flowSelections[screenID] ?? .random
+    }
+
+    /// Sets and applies a Flow selection on the screen the popover is targeting.
+    func selectFlowForTarget(_ selection: FlowSelection) {
+        guard let screenID = targetScreen?.uuidString else { return }
+        selectFlow(selection, for: screenID)
+    }
+
+    func selectFlow(_ selection: FlowSelection, for screenID: String) {
+        flowSelections[screenID] = selection
+        UserDefaults.standard.set(flowSelections.mapValues(\.storageValue), forKey: Self.flowSelectionsKey)
+        (windowControllers[screenID]?.window as? FlowWindow)?.viewModel?.apply(selection)
+    }
+
+    /// Screens showing a deleted custom Flow fall back to random.
+    func customFlowDeleted(_ id: UUID) {
+        for screen in screens where flowSelection(for: screen.uuidString) == .custom(id) {
+            selectFlow(.random, for: screen.uuidString)
+        }
+    }
+
+    /// Screens showing an edited custom Flow pick up the change.
+    func customFlowChanged(_ id: UUID) {
+        for viewModel in flowViewModels where viewModel.selection == .custom(id) {
+            viewModel.apply(.custom(id))
+        }
+    }
+
     // MARK: - Windows
 
     func fluidWindow(for screenID: String) -> FluidWindow? {
@@ -228,6 +325,8 @@ class WallpaperService: ObservableObject {
             window = FluidWindow(screen: screen, selection: selection(for: screen.uuidString))
         case .video:
             window = VideoWindow(screen: screen)
+        case .flow:
+            window = FlowWindow(screen: screen, selection: flowSelection(for: screen.uuidString))
         }
         let controller = NSWindowController(window: window)
         windowControllers[screen.uuidString] = controller
@@ -317,11 +416,11 @@ class WallpaperService: ObservableObject {
     }
 
     /// Files Meshy writes as desktop pictures (snapshots of the live wallpaper) live in the
-    /// temporary directory or, for video frames, in Meshy's caches; they are never the user's
+    /// temporary directory or, for video frames and Flow stills, in Meshy's caches; they are never the user's
     /// own picture.
     private static func isMeshySnapshot(_ url: URL) -> Bool {
         let path = url.standardizedFileURL.resolvingSymlinksInPath().path
-        return [FileManager.default.temporaryDirectory, DesktopSnapshot.videoFramesFolder]
+        return [FileManager.default.temporaryDirectory, DesktopSnapshot.videoFramesFolder, DesktopSnapshot.flowStillsFolder]
             .contains { path.hasPrefix($0.resolvingSymlinksInPath().path) }
     }
 
@@ -334,6 +433,10 @@ class WallpaperService: ObservableObject {
     func refresh() {
         for viewModel in fluidViewModels {
             viewModel.regenerate()
+            viewModel.setTimer()
+        }
+        for viewModel in flowViewModels {
+            viewModel.refresh()
             viewModel.setTimer()
         }
     }
