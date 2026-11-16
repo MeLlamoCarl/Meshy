@@ -328,6 +328,17 @@ struct ContentView: View {
                 Button(action: openAbout) {
                     Label("About", systemImage: "info")
                 }
+                if #available(macOS 14, *) {
+                    OpenSettingsButton()
+                } else {
+                    Button {
+                        AppDelegate.statusBar?.popover.performClose(nil)
+                        NSApp.activate(ignoringOtherApps: true)
+                        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                    } label: {
+                        Label("Settings…", systemImage: "gearshape")
+                    }
+                }
                 Button(action: openOnboarding) {
                     Label("Onboarding", systemImage: "circle.circle.fill")
                 }
@@ -446,5 +457,23 @@ struct ContentView: View {
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView(openAbout: {}, openOnboarding: {})
+    }
+}
+
+/// Opens the Settings window (macOS 14 no longer lets apps send `showSettingsWindow:`).
+@available(macOS 14, *)
+private struct OpenSettingsButton: View {
+    @Environment(\.openSettings)
+    private var openSettings
+
+    var body: some View {
+        Button {
+            // Meshy is a menu bar app: bring it forward so the window opens in front.
+            AppDelegate.statusBar?.popover.performClose(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            openSettings()
+        } label: {
+            Label("Settings…", systemImage: "gearshape")
+        }
     }
 }
