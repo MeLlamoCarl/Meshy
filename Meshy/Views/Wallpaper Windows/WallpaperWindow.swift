@@ -9,6 +9,7 @@ import Foundation
 import MeshKit
 
 import AppKit
+import MetalKit
 import SwiftUI
 
 class WallpaperWindow: NSWindow {
@@ -47,6 +48,26 @@ class WallpaperWindow: NSWindow {
             }
         }
 
+        // MTKView's display link can stop for good when the display sleeps or the screen is locked
+        // (the wallpaper stayed black after unlocking, with no frames drawn). Restart it then.
+        let workspace = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.screensDidWakeNotification, NSWorkspace.didWakeNotification,
+                     NSWorkspace.sessionDidBecomeActiveNotification] {
+            workspace.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                self?.restartMetalViews()
+            }
+        }
+        for name in [NSApplication.didChangeScreenParametersNotification] {
+            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                self?.restartMetalViews()
+            }
+        }
+        DistributedNotificationCenter.default().addObserver(
+            forName: .init("com.apple.screenIsUnlocked"), object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.restartMetalViews()
+        }
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
             self?.isOpaque = true
             self?.backgroundColor = .black
@@ -76,6 +97,32 @@ class WallpaperWindow: NSWindow {
         if frame != self.frame {
             setFrame(frame, display: true)
         }
+    }
+
+    /// Restarts animating Metal views (toggling `isPaused` recreates their display link) and redraws
+    /// static ones, whose contents can be gone after sleep. Again a moment later, as the displays
+    /// may still be reconfiguring when the notification arrives.
+    func restartMetalViews() {
+        func restart() {
+            guard let contentView else { return }
+            for view in Self.metalViews(in: contentView) {
+                if view.isPaused {
+                    view.needsDisplay = true
+                } else {
+                    view.isPaused = true
+                    view.isPaused = false
+                }
+            }
+        }
+        restart()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+            guard self?.isVisible == true else { return }
+            restart()
+        }
+    }
+
+    private static func metalViews(in view: NSView) -> [MTKView] {
+        (view as? MTKView).map { [$0] } ?? view.subviews.flatMap(metalViews(in:))
     }
 
     override var canBecomeKey: Bool {
