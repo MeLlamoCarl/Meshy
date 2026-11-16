@@ -13,6 +13,8 @@ extension SettingsView {
         var colorSpace: ColorSpace = .sRGB
         @State
         var launchAtLogin: Bool = LaunchAtLogin.isEnabled
+        @AppStorage(UpdateChecker.checksAtLaunchKey)
+        var checksForUpdatesAtLaunch: Bool = true
 
         var body: some View {
             SectionView {
@@ -38,6 +40,17 @@ extension SettingsView {
                             .tag(colorSpace)
                     }
                 }
+
+                HStack {
+                    Toggle("Check for updates at launch", isOn: $checksForUpdatesAtLaunch)
+                    Spacer()
+                    Button("Check for Updates…") {
+                        UpdateChecker.checkNow()
+                    }
+                }
+                Text("Version \(UpdateChecker.currentVersion)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             } header: {
                 Label {
                     Text("General")

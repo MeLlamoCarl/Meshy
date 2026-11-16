@@ -4,17 +4,20 @@
   <img src="Design/Meshy%20Icon%20256.png" alt="Meshy app icon" width="128" height="128">
 </p>
 
-<p align="center">Live mesh-gradient and video wallpapers for macOS.</p>
+<p align="center">Live mesh-gradient, liquid and video wallpapers for macOS.</p>
 
 Meshy brings [Acrylic](https://github.com/EthanLipnik/Acrylic), Ethan Lipnik's fluid wallpaper
 engine, back to life. Meshy keeps the same idea (living, color-shifting mesh gradients and video
 wallpapers right on your desktop) working on newer versions of macOS, with a few small tweaks and
 improvements along the way:
 
+- Flow: soft liquid drops that drift around the screen, flatten against its edges and leave a
+  glowing trail, with a Flow Editor to pick your own colors, drop count, size and speed
 - Each display can have its own theme, and your choice is remembered across restarts
 - A Fluid Editor to design and save your own gradients
 - Video wallpapers from Pixabay (with your own free API key) or from your own files
 - Pauses automatically while an app is fullscreen
+- Lets you know when a new version is out (you can turn this off in Settings › General)
 
 Meshy is not affiliated with or endorsed by the original author. See [NOTICE.md](NOTICE.md) for
 attributions and third-party licenses.

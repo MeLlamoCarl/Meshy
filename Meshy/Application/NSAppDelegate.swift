@@ -48,6 +48,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !UserDefaults.standard.bool(forKey: "didShowOnboarding") {
             showOnboarding()
         }
+
+        // A few seconds in, so starting the wallpaper (and login) isn't slowed down.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+            UpdateChecker.checkAtLaunch()
+        }
     }
 
     @MainActor
