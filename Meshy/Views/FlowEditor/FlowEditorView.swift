@@ -57,12 +57,18 @@ struct FlowEditorView: View {
     @State private var saveName: String = ""
     @State private var showAppliedBadge: Bool = false
     @State private var previewID = UUID()
+    /// The preview is created once the window is on screen: an MTKView made while its window
+    /// is still being set up never starts drawing (blank preview until Restart).
+    @State private var showsPreview: Bool = false
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            FlowView(palette: palette, settings: settings, framesPerSecond: 60)
-                .id(previewID)
-                .ignoresSafeArea()
+            if showsPreview {
+                FlowView(palette: palette, settings: settings, framesPerSecond: 60)
+                    .id(previewID)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+            }
 
             if showAppliedBadge {
                 Label("Applied to Desktop", systemImage: "checkmark.circle.fill")
@@ -148,7 +154,12 @@ struct FlowEditorView: View {
         } message: {
             Text("Enter a name for this custom Flow.")
         }
-        .onAppear(perform: load)
+        .onAppear {
+            load()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                withAnimation(.easeOut(duration: 0.3)) { showsPreview = true }
+            }
+        }
         .onChange(of: state.token) { _ in load() }
         .frame(minWidth: 500, minHeight: 350)
     }
