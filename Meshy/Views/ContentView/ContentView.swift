@@ -215,34 +215,8 @@ struct ContentView: View {
         HStack {
             // + menu: create / import
             Menu {
-                Menu("Create Mesh") {
-                    Button("3x3") {
-                        let query = URLQueryItem(name: "size", value: "3")
-                        WindowManager.MeshCreator.open(query: query)
-                    }
-                    Button("4x4") {
-                        let query = URLQueryItem(name: "size", value: "4")
-                        WindowManager.MeshCreator.open(query: query)
-                    }
-                    Button("5x5") {
-                        let query = URLQueryItem(name: "size", value: "5")
-                        WindowManager.MeshCreator.open(query: query)
-                    }
-                    Button("6x6") {
-                        let query = URLQueryItem(name: "size", value: "6")
-                        WindowManager.MeshCreator.open(query: query)
-                    }
-                    Button("7x7") {
-                        let query = URLQueryItem(name: "size", value: "7")
-                        WindowManager.MeshCreator.open(query: query)
-                    }
-                    Button("8x8") {
-                        let query = URLQueryItem(name: "size", value: "8")
-                        WindowManager.MeshCreator.open(query: query)
-                    }
-                }
-
                 Button("Create Custom Fluid...") {
+                    FluidEditorState.shared.prepareNew()
                     WindowManager.FluidEditor.open()
                 }
 
@@ -270,6 +244,11 @@ struct ContentView: View {
                         FlowEditorState.shared.prepareEditing(id)
                         WindowManager.FlowEditor.open()
                     } else {
+                        if let id = selectedCustomID {
+                            FluidEditorState.shared.prepareEditing(id)
+                        } else {
+                            FluidEditorState.shared.prepareNew()
+                        }
                         WindowManager.FluidEditor.open()
                     }
                 }

@@ -42,13 +42,12 @@
 		AA7397792980C09800B38BE0 /* MeshyShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA263B982980C00F005861C0 /* MeshyShortcuts.swift */; };
 		AA74099328B0520B0008A951 /* ColorSpace.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA74099228B0520B0008A951 /* ColorSpace.swift */; };
 		AA749C6628931EFB002CD39A /* MeshyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA749C6528931EFB002CD39A /* MeshyApp.swift */; };
-		AA749C6828931EFB002CD39A /* MeshCreatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA749C6728931EFB002CD39A /* MeshCreatorView.swift */; };
 		AAMI00022899C1CB009E0700 /* Meshy.icon in Resources */ = {isa = PBXBuildFile; fileRef = AAMI00012899C1CB009E0700 /* Meshy.icon */; };
 		AA749C6A28931EFC002CD39A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA749C6928931EFC002CD39A /* Assets.xcassets */; };
 		AA749C6E28931EFC002CD39A /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA749C6D28931EFC002CD39A /* Preview Assets.xcassets */; };
 		AA7C865A2893576B00D3469E /* MeshKit in Frameworks */ = {isa = PBXBuildFile; productRef = AA7C86592893576B00D3469E /* MeshKit */; };
 		AA94ED2228FFA783007F58C6 /* CGImage+CVPixelBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA94ED2128FFA783007F58C6 /* CGImage+CVPixelBuffer.swift */; };
-		AAA8947C28B13BBA00880278 /* MeshCreatorView+ExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA8947B28B13BBA00880278 /* MeshCreatorView+ExportView.swift */; };
+		AAA8947C28B13BBA00880278 /* ImageExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA8947B28B13BBA00880278 /* ImageExportView.swift */; };
 		AAAE6364289DC620000ED2F0 /* DebouncedObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAE6363289DC620000ED2F0 /* DebouncedObject.swift */; };
 		AAAE6367289EA290000ED2F0 /* SettingsView+GeneralView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAE6366289EA290000ED2F0 /* SettingsView+GeneralView.swift */; };
 		AAAE6369289EA351000ED2F0 /* SettingsView+FluidWallpaperView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAE6368289EA351000ED2F0 /* SettingsView+FluidWallpaperView.swift */; };
@@ -122,14 +121,13 @@
 		AA74099228B0520B0008A951 /* ColorSpace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorSpace.swift; sourceTree = "<group>"; };
 		AA749C6228931EFB002CD39A /* Meshy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Meshy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA749C6528931EFB002CD39A /* MeshyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshyApp.swift; sourceTree = "<group>"; };
-		AA749C6728931EFB002CD39A /* MeshCreatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshCreatorView.swift; sourceTree = "<group>"; };
 		AAMI00012899C1CB009E0700 /* Meshy.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = Meshy.icon; sourceTree = "<group>"; };
 		AA749C6928931EFC002CD39A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA749C6D28931EFC002CD39A /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		AA94ED2128FFA783007F58C6 /* CGImage+CVPixelBuffer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "CGImage+CVPixelBuffer.swift"; sourceTree = "<group>"; };
 		AA9533C9297B021B002A4028 /* MeshKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = MeshKit; sourceTree = "<group>"; };
 		AA9533CA297B0221002A4028 /* PixabayKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = PixabayKit; sourceTree = "<group>"; };
-		AAA8947B28B13BBA00880278 /* MeshCreatorView+ExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MeshCreatorView+ExportView.swift"; sourceTree = "<group>"; };
+		AAA8947B28B13BBA00880278 /* ImageExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageExportView.swift; sourceTree = "<group>"; };
 		AAAE6363289DC620000ED2F0 /* DebouncedObject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebouncedObject.swift; sourceTree = "<group>"; };
 		AAAP00012899C1CB009E0700 /* AppPaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPaths.swift; sourceTree = "<group>"; };
 		AACF00012899C1CB009E0700 /* CustomWallpaperConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomWallpaperConfig.swift; sourceTree = "<group>"; };
@@ -231,7 +229,7 @@
 				AA4AF8EF28A16686001F98D5 /* ContentView */,
 				AA278947289C5A59001E897B /* Wallpaper Windows */,
 				AA35B89828A4074600F7B190 /* Onboarding */,
-				AAA8947A28B13B6D00880278 /* MeshCreator */,
+				AAA8947A28B13B6D00880278 /* ImageExport */,
 				AAFE00032899C1CB009E0700 /* FluidEditor */,
 				AAAE6365289E017B000ED2F0 /* SettingsView */,
 				AACCD490289DA688006551C1 /* VideosView */,
@@ -368,13 +366,12 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		AAA8947A28B13B6D00880278 /* MeshCreator */ = {
+		AAA8947A28B13B6D00880278 /* ImageExport */ = {
 			isa = PBXGroup;
 			children = (
-				AA749C6728931EFB002CD39A /* MeshCreatorView.swift */,
-				AAA8947B28B13BBA00880278 /* MeshCreatorView+ExportView.swift */,
+				AAA8947B28B13BBA00880278 /* ImageExportView.swift */,
 			);
-			path = MeshCreator;
+			path = ImageExport;
 			sourceTree = "<group>";
 		};
 		AAAE6365289E017B000ED2F0 /* SettingsView */ = {
@@ -513,7 +510,7 @@
 				AA263B9B2980C00F005861C0 /* GenerateMeshIntent.swift in Sources */,
 				AA0B119828FDDBEE0086277A /* URL+Extensions.swift in Sources */,
 				AA74099328B0520B0008A951 /* ColorSpace.swift in Sources */,
-				AAA8947C28B13BBA00880278 /* MeshCreatorView+ExportView.swift in Sources */,
+				AAA8947C28B13BBA00880278 /* ImageExportView.swift in Sources */,
 				AA68252B289B1419003A0D8F /* FluidViewModel.swift in Sources */,
 				AAAE6367289EA290000ED2F0 /* SettingsView+GeneralView.swift in Sources */,
 				AACCD498289DA711006551C1 /* VideosManagementView+VideosView.swift in Sources */,
@@ -543,7 +540,6 @@
 				AA108BBF289C1A25009C50A5 /* FluidWindow.swift in Sources */,
 				AA0EA86228933069003CEB51 /* ScreenSaverView.swift in Sources */,
 				AAF6747128A4221100044BFD /* OnboardingView+FluidView.swift in Sources */,
-				AA749C6828931EFB002CD39A /* MeshCreatorView.swift in Sources */,
 				AA749C6628931EFB002CD39A /* MeshyApp.swift in Sources */,
 				AAAP00022899C1CB009E0700 /* AppPaths.swift in Sources */,
 				AACF00022899C1CB009E0700 /* CustomWallpaperConfig.swift in Sources */,

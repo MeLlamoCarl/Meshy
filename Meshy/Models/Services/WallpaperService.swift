@@ -73,6 +73,12 @@ enum DesktopSnapshot {
 
     /// Flow stills, rendered once per palette and screen size (see `FlowViewModel`).
     nonisolated static var flowStillsFolder: URL {
+        // Bump the number when Flow's look changes, so its stills are rendered again.
+        AppPaths.caches.appendingPathComponent("Flow Stills 2", isDirectory: true)
+    }
+
+    /// Stills of Flow's earlier look.
+    nonisolated static var oldFlowStillsFolder: URL {
         AppPaths.caches.appendingPathComponent("Flow Stills", isDirectory: true)
     }
 
@@ -95,6 +101,7 @@ enum DesktopSnapshot {
             }
         }
         try NSWorkspace.shared.setDesktopImageURL(url, for: screen)
+        try? FileManager.default.removeItem(at: oldFlowStillsFolder)
         removeSnapshots(in: folder.appendingPathComponent(screenID, isDirectory: true), except: nil)
     }
 
@@ -271,6 +278,13 @@ class WallpaperService: ObservableObject {
         }
     }
 
+    /// Screens showing an edited custom pick up the change.
+    func customWallpaperChanged(_ id: UUID) {
+        for viewModel in fluidViewModels where viewModel.selection == .custom(id) {
+            viewModel.apply(.custom(id))
+        }
+    }
+
     private func persistSelections() {
         UserDefaults.standard.set(selections.mapValues(\.storageValue), forKey: Self.selectionsKey)
     }
@@ -420,7 +434,8 @@ class WallpaperService: ObservableObject {
     /// own picture.
     private static func isMeshySnapshot(_ url: URL) -> Bool {
         let path = url.standardizedFileURL.resolvingSymlinksInPath().path
-        return [FileManager.default.temporaryDirectory, DesktopSnapshot.videoFramesFolder, DesktopSnapshot.flowStillsFolder]
+        return [FileManager.default.temporaryDirectory, DesktopSnapshot.videoFramesFolder,
+                DesktopSnapshot.flowStillsFolder, DesktopSnapshot.oldFlowStillsFolder]
             .contains { path.hasPrefix($0.resolvingSymlinksInPath().path) }
     }
 

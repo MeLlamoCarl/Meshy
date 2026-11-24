@@ -7,13 +7,52 @@ import MeshKit
 import RandomColor
 import SwiftUI
 
+/// What the Fluid Editor opens with: a new Fluid (from what the targeted screen shows) or an
+/// existing custom. Set before opening the window; an open editor picks up the change.
+@MainActor
+final class FluidEditorState: ObservableObject {
+    static let shared = FluidEditorState()
+
+    enum Request: Equatable {
+        case new
+        case edit(UUID)
+    }
+
+    @Published
+    private(set) var request: Request = .new
+    /// Changes on every request, so asking again for the same one still reloads the editor.
+    @Published
+    private(set) var token = UUID()
+
+    func prepareNew() {
+        request = .new
+        token = UUID()
+    }
+
+    func prepareEditing(_ id: UUID) {
+        request = .edit(id)
+        token = UUID()
+    }
+}
+
 struct FluidEditorView: View {
+    @ObservedObject
+    private var state = FluidEditorState.shared
+
 
     // MARK: - Preview state
-    @State private var colors: MeshColorGrid
+    @State private var colors: MeshColorGrid = MeshKit.generate(palette: .blue, luminosity: .dark)
     @State private var meshRandomizer: MeshRandomizer?
     @State private var shouldAnimate: Bool = true
+    /// A mesh view keeps the colors, grain and pace it started with: a new ID starts a new one.
     @State private var meshPreviewID: UUID = UUID()
+    /// The preview is created once the window is on screen: an MTKView made while its window
+    /// is still being set up never starts drawing (blank preview).
+    @State private var showsPreview: Bool = false
+    @State private var restartTask: Task<Void, Never>?
+    /// The custom being edited (nil for a new one).
+    @State private var editingID: UUID?
+    @State private var editingName: String = ""
 
     // MARK: - Color settings
     @State private var selectedHueNames: Set<String> = ["Blue"]
@@ -35,6 +74,8 @@ struct FluidEditorView: View {
 
     // MARK: - Applied feedback
     @State private var showAppliedBadge: Bool = false
+    @State private var badgeText: String = ""
+    @State private var showExport: Bool = false
 
     @AppStorage("colorSpace") private var colorSpace: ColorSpace = .sRGB
 
@@ -54,79 +95,42 @@ struct FluidEditorView: View {
         }
     }
 
-    // MARK: - Init
-
-    init() {
-        // Edit the screen the menu bar popover is targeting.
-        let viewModel = WallpaperService.shared.targetFluidViewModel
-        let override = viewModel?.settingsOverride
-        let meshDimension = {
-            let stored = UserDefaults.standard.integer(forKey: "FWMeshSize")
-            return stored > 0 ? stored : 5
-        }()
-        let initialColors = viewModel?.colors
-            ?? MeshKit.generate(
-                palette: [Hue.blue],
-                luminosity: .dark,
-                size: MeshSize(width: meshDimension, height: meshDimension),
-                withRandomizedLocations: true
-            )
-        _colors = .init(initialValue: initialColors)
-
-        if let override, !override.hueNames.isEmpty {
-            _selectedHueNames = .init(initialValue: Set(override.hueNames))
-            _luminosity = .init(initialValue: override.luminosityName == "light" ? .light
-                : override.luminosityName == "dark" ? .dark : .vibrant)
-        } else if let currentPalette = viewModel?.currentPalette {
-            _selectedHueNames = .init(initialValue: [currentPalette.displayTitle])
-        }
-
-        let storedSize = UserDefaults.standard.integer(forKey: "FWMeshSize")
-        _meshSize = .init(initialValue: override?.meshSize ?? (storedSize > 0 ? storedSize : 5))
-
-        let storedGrain = UserDefaults.standard.object(forKey: "FWGrainAlpha") as? Double ?? 0.05
-        _grainAlpha = .init(initialValue: override?.grainAlpha ?? Float(storedGrain))
-
-        let storedSubs = UserDefaults.standard.integer(forKey: "FWSubdivisions")
-        _subdivisions = .init(initialValue: override?.subdivisions ?? Float(storedSubs > 0 ? storedSubs : 18))
-
-        let storedSpeed = UserDefaults.standard.object(forKey: "FWCustomSpeed") as? Double ?? 4.0
-        _animationSpeed = .init(initialValue: override?.animationSpeed ?? storedSpeed)
-    }
-
     // MARK: - Body
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
             // Full-screen mesh preview
-            Group {
-                if shouldAnimate, let randomizer = meshRandomizer {
-                    Mesh(
-                        colors: colors,
-                        animatorConfiguration: .init(
-                            framesPerSecond: 30,
-                            animationSpeedRange: animationSpeed ... animationSpeed * 1.5,
-                            meshRandomizer: randomizer
-                        ),
-                        grainAlpha: grainAlpha,
-                        subdivisions: Int(subdivisions),
-                        colorSpace: colorSpace.cgColorSpace
-                    )
-                } else {
-                    Mesh(
-                        colors: colors,
-                        grainAlpha: grainAlpha,
-                        subdivisions: Int(subdivisions),
-                        colorSpace: colorSpace.cgColorSpace
-                    )
+            if showsPreview {
+                Group {
+                    if shouldAnimate, let meshRandomizer {
+                        Mesh(
+                            colors: colors,
+                            animatorConfiguration: .init(
+                                framesPerSecond: 30,
+                                animationSpeedRange: animationSpeed ... animationSpeed * 1.5,
+                                meshRandomizer: meshRandomizer
+                            ),
+                            grainAlpha: grainAlpha,
+                            subdivisions: Int(subdivisions),
+                            colorSpace: colorSpace.cgColorSpace
+                        )
+                    } else {
+                        Mesh(
+                            colors: colors,
+                            grainAlpha: grainAlpha,
+                            subdivisions: Int(subdivisions),
+                            colorSpace: colorSpace.cgColorSpace
+                        )
+                    }
                 }
+                .id(meshPreviewID)
+                .edgesIgnoringSafeArea(.all)
+                .transition(.opacity)
             }
-            .id(meshPreviewID)
-            .edgesIgnoringSafeArea(.all)
 
             // Applied badge
             if showAppliedBadge {
-                Label("Applied to Desktop", systemImage: "checkmark.circle.fill")
+                Label(badgeText, systemImage: "checkmark.circle.fill")
                     .font(.caption.bold())
                     .padding(8)
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
@@ -149,13 +153,7 @@ struct FluidEditorView: View {
                 Toggle(isOn: $shouldAnimate) {
                     Label("Animate", systemImage: "play.fill")
                 }
-                .onChange(of: shouldAnimate) { value in
-                    if value {
-                        meshRandomizer = .withMeshColors(colors)
-                    } else {
-                        meshRandomizer = nil
-                    }
-                }
+                .help(shouldAnimate ? "Pause the preview" : "Animate the preview")
             }
 
             // Color picker popover
@@ -165,7 +163,7 @@ struct FluidEditorView: View {
                 } label: {
                     Label("Colors", systemImage: "paintpalette.fill")
                 }
-                .popover(isPresented: $showColorPicker) {
+                .popover(isPresented: $showColorPicker, arrowEdge: .bottom) {
                     colorPickerPopover
                 }
             }
@@ -177,7 +175,7 @@ struct FluidEditorView: View {
                 } label: {
                     Label("Settings", systemImage: "slider.horizontal.3")
                 }
-                .popover(isPresented: $showSettings) {
+                .popover(isPresented: $showSettings, arrowEdge: .bottom) {
                     settingsPopover
                 }
             }
@@ -193,12 +191,40 @@ struct FluidEditorView: View {
             }
 
             // Save button
-            ToolbarItem(id: "save", placement: .primaryAction) {
+            ToolbarItem(id: "export", placement: .primaryAction) {
                 Button {
-                    saveName = ""
-                    showSaveDialog = true
+                    showExport.toggle()
                 } label: {
-                    Label("Save Custom...", systemImage: "square.and.arrow.down")
+                    Label("Export Image...", systemImage: "photo")
+                }
+                .help("Export Image…")
+                .popover(isPresented: $showExport, arrowEdge: .bottom) {
+                    ImageExportView(defaultName: "Meshy Fluid", canShuffle: false, render: renderImage) {
+                        showBadge("Image Saved")
+                    }
+                }
+            }
+
+            ToolbarItem(id: "save", placement: .primaryAction) {
+                if editingID != nil {
+                    Menu {
+                        Button("Save as New…") {
+                            saveName = ""
+                            showSaveDialog = true
+                        }
+                    } label: {
+                        Label("Save", systemImage: "square.and.arrow.down")
+                    } primaryAction: {
+                        saveChanges()
+                    }
+                    .help("Save changes to “\(editingName)”")
+                } else {
+                    Button {
+                        saveName = ""
+                        showSaveDialog = true
+                    } label: {
+                        Label("Save Custom...", systemImage: "square.and.arrow.down")
+                    }
                 }
             }
         }
@@ -210,10 +236,17 @@ struct FluidEditorView: View {
             Text("Enter a name for this custom wallpaper preset.")
         }
         .onAppear {
-            if shouldAnimate {
-                meshRandomizer = .withMeshColors(colors)
+            load()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                withAnimation(.easeOut(duration: 0.3)) { showsPreview = true }
             }
         }
+        .onDisappear { restartTask?.cancel() }
+        .onChange(of: state.token) { _ in load() }
+        // The renderer makes its grain texture once, and the animation keeps its pace until each
+        // point arrives: both need a new preview.
+        .onChange(of: grainAlpha) { _ in restartPreviewSoon() }
+        .onChange(of: animationSpeed) { _ in restartPreviewSoon() }
         .frame(minWidth: 500, minHeight: 350)
     }
 
@@ -245,12 +278,16 @@ struct FluidEditorView: View {
                                 .frame(width: 10, height: 10)
                             Text(hue.presetTitle)
                                 .font(.caption.bold())
+                            if isSelected {
+                                Image(systemName: "checkmark")
+                                    .font(.caption2.bold())
+                            }
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 5)
                         .background(
                             RoundedRectangle(cornerRadius: 6)
-                                .fill(isSelected ? Color.accentColor.opacity(0.2) : Color.secondary.opacity(0.1))
+                                .fill(isSelected ? Color.accentColor.opacity(0.35) : Color.secondary.opacity(0.1))
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
@@ -292,17 +329,14 @@ struct FluidEditorView: View {
                 Label("Mesh Size", systemImage: "grid")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                HStack(spacing: 4) {
-                    ForEach([3, 4, 5, 6, 7, 8], id: \.self) { size in
-                        Button("\(size)×\(size)") {
-                            meshSize = size
-                            regeneratePreview()
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.mini)
-                        .tint(meshSize == size ? .accentColor : .secondary)
-                    }
+                Picker("", selection: Binding(get: { meshSize }, set: { size in
+                    meshSize = size
+                    regeneratePreview()
+                })) {
+                    ForEach(3 ... 8, id: \.self) { Text("\($0)×\($0)").tag($0) }
                 }
+                .pickerStyle(.segmented)
+                .labelsHidden()
             }
 
             Divider()
@@ -319,22 +353,16 @@ struct FluidEditorView: View {
                 sliderRow(
                     label: "Subdivisions",
                     icon: "cube",
-                    value: Binding(get: { Double(subdivisions) }, set: { subdivisions = Float($0) }),
+                    value: Binding(get: { Double(subdivisions) }, set: { subdivisions = Float($0.rounded()) }),
                     range: 2 ... 32,
-                    format: "%.0f",
-                    step: 1
+                    format: "%.0f"
                 )
                 sliderRow(
                     label: "Speed",
                     icon: "speedometer",
                     value: $animationSpeed,
                     range: 1 ... 20,
-                    format: "%.0fs",
-                    onChange: {
-                        if shouldAnimate {
-                            meshPreviewID = UUID()
-                        }
-                    }
+                    format: "%.0fs"
                 )
             }
         }
@@ -348,22 +376,14 @@ struct FluidEditorView: View {
         icon: String,
         value: Binding<Double>,
         range: ClosedRange<Double>,
-        format: String,
-        step: Double? = nil,
-        onChange: (() -> Void)? = nil
+        format: String
     ) -> some View {
         HStack(spacing: 6) {
             Label(label, systemImage: icon)
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .frame(width: 110, alignment: .leading)
-            if let step = step {
-                Slider(value: value, in: range, step: step)
-                    .onChange(of: value.wrappedValue) { _ in onChange?() }
-            } else {
-                Slider(value: value, in: range)
-                    .onChange(of: value.wrappedValue) { _ in onChange?() }
-            }
+            Slider(value: value, in: range)
             Text(String(format: format, value.wrappedValue))
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.secondary)
@@ -373,55 +393,101 @@ struct FluidEditorView: View {
 
     // MARK: - Actions
 
-    func regeneratePreview() {
-        let hues = selectedHueNames.compactMap { name in
-            Hue.allCases.first { $0.displayTitle == name }
-        }
-        let effectiveHues = hues.isEmpty ? [Hue.blue] : hues
-
-        colors = MeshKit.generate(
-            palette: effectiveHues,
-            luminosity: luminosity.luminosity,
-            size: MeshSize(width: meshSize, height: meshSize),
-            withRandomizedLocations: true
-        )
-
-        if shouldAnimate {
-            meshRandomizer = .withMeshColors(colors)
-            meshPreviewID = UUID()
-        }
-    }
-
-    func applyToWallpaper() {
-        guard let viewModel = WallpaperService.shared.targetFluidViewModel else { return }
-
-        // Settings apply to the targeted screen only, not globally.
-        viewModel.settingsOverride = CustomWallpaperConfig(
-            name: "Fluid Editor",
-            hueNames: Array(selectedHueNames),
-            luminosityName: luminosity == .light ? "light" : luminosity == .dark ? "dark" : "vibrant",
-            meshSize: meshSize,
-            grainAlpha: grainAlpha,
-            subdivisions: subdivisions,
-            animationSpeed: animationSpeed
-        )
-        viewModel.applyColors(colors)
-
-        withAnimation {
-            showAppliedBadge = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            withAnimation {
-                showAppliedBadge = false
+    private func load() {
+        let defaults = UserDefaults.standard
+        switch state.request {
+        case let .edit(id):
+            if let config = CustomWallpaperConfig.loadAll().first(where: { $0.id == id }) {
+                load(config)
+                editingID = config.id
+                editingName = config.name
+                let viewModel = WallpaperService.shared.targetFluidViewModel
+                if let viewModel, viewModel.selection == .custom(id) {
+                    show(viewModel.colors)
+                } else {
+                    regeneratePreview()
+                }
+                return
+            }
+            fallthrough
+        case .new:
+            // Start from what the targeted screen shows.
+            editingID = nil
+            editingName = ""
+            let viewModel = WallpaperService.shared.targetFluidViewModel
+            if let config = viewModel?.settingsOverride {
+                load(config)
+            } else {
+                selectedHueNames = [(viewModel?.currentPalette ?? .blue).displayTitle]
+                luminosity = Self.currentLuminosity
+                let size = defaults.integer(forKey: "FWMeshSize")
+                meshSize = size > 0 ? min(max(size, 3), 8) : 5
+                grainAlpha = Float(defaults.object(forKey: "FWGrainAlpha") as? Double ?? 0.05)
+                let subs = defaults.integer(forKey: "FWSubdivisions")
+                subdivisions = Float(subs > 0 ? subs : 18)
+                let speed = defaults.double(forKey: "FWCustomSpeed")
+                animationSpeed = speed > 0 ? speed : 4
+            }
+            if let viewModel {
+                show(viewModel.colors)
+            } else {
+                regeneratePreview()
             }
         }
     }
 
-    func saveCustomWallpaper() {
-        guard !saveName.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+    private func load(_ config: CustomWallpaperConfig) {
+        selectedHueNames = config.hueNames.isEmpty ? ["Blue"] : Set(config.hueNames)
+        luminosity = config.luminosityName == "light" ? .light : config.luminosityName == "dark" ? .dark : .vibrant
+        meshSize = config.meshSize
+        grainAlpha = config.grainAlpha
+        subdivisions = config.subdivisions
+        animationSpeed = config.animationSpeed > 0 ? config.animationSpeed : 4
+    }
 
-        let config = CustomWallpaperConfig(
-            name: saveName.trimmingCharacters(in: .whitespaces),
+    /// The luminosity presets use right now (as in `FluidViewModel`).
+    private static var currentLuminosity: LuminosityOption {
+        switch WallpaperColorScheme(rawValue: UserDefaults.standard.string(forKey: "FWColorScheme") ?? "system") {
+        case .light: return .light
+        case .dark: return .dark
+        case .system: return FluidViewModel.InterfaceStyle() == .Light ? .light : .dark
+        default: return .vibrant
+        }
+    }
+
+    func regeneratePreview() {
+        let hues = selectedHueNames.compactMap { name in
+            Hue.allCases.first { $0.displayTitle == name }
+        }
+        show(MeshKit.generate(
+            palette: hues.isEmpty ? [Hue.blue] : hues,
+            luminosity: luminosity.luminosity,
+            size: MeshSize(width: meshSize, height: meshSize),
+            withRandomizedLocations: true
+        ))
+    }
+
+    private func show(_ newColors: MeshColorGrid) {
+        restartTask?.cancel()
+        colors = newColors
+        meshRandomizer = .withMeshColors(newColors)
+        meshPreviewID = UUID()
+    }
+
+    /// Restarts the preview once a slider pauses, not on every step of it.
+    private func restartPreviewSoon() {
+        restartTask?.cancel()
+        restartTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 120_000_000)
+            guard !Task.isCancelled else { return }
+            meshPreviewID = UUID()
+        }
+    }
+
+    private func config(id: UUID, name: String) -> CustomWallpaperConfig {
+        CustomWallpaperConfig(
+            id: id,
+            name: name,
             hueNames: Array(selectedHueNames),
             luminosityName: luminosity == .light ? "light" : luminosity == .dark ? "dark" : "vibrant",
             meshSize: meshSize,
@@ -429,8 +495,65 @@ struct FluidEditorView: View {
             subdivisions: subdivisions,
             animationSpeed: animationSpeed
         )
+    }
+
+    func applyToWallpaper() {
+        let config = config(id: editingID ?? UUID(), name: editingName.isEmpty ? "Fluid Editor" : editingName)
+        let colors = colors
+        let service = WallpaperService.shared
+        Task { @MainActor in
+            if service.selectedWallpaper != .fluid {
+                try? await service.start(.fluid)
+            }
+            guard let viewModel = service.targetFluidViewModel else { return }
+            // Applies to the targeted screen only, not globally.
+            viewModel.apply(config, colors: colors)
+            showBadge("Applied to Desktop")
+        }
+    }
+
+    private func renderImage(width: Int, height: Int, seed _: UInt64) async -> CGImage? {
+        // The grain is drawn in 8×8 blocks: draw whole ones and crop.
+        let size = MeshSize(width: (width + 7) / 8 * 8, height: (height + 7) / 8 * 8)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".png")
+        defer { try? FileManager.default.removeItem(at: url) }
+        do {
+            _ = try await colors.export(to: url, size: size, subdivisions: Int(subdivisions),
+                                        grainAlpha: grainAlpha, colorSpace: colorSpace.cgColorSpace)
+            guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+                  let image = CGImageSourceCreateImageAtIndex(source, 0, [kCGImageSourceShouldCacheImmediately: true] as CFDictionary)
+            else { return nil }
+            return image.cropping(to: CGRect(x: 0, y: 0, width: width, height: height))
+        } catch {
+            print(error)
+            return nil
+        }
+    }
+
+    private func showBadge(_ text: String) {
+        badgeText = text
+        Task { @MainActor in
+            withAnimation { showAppliedBadge = true }
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            withAnimation { showAppliedBadge = false }
+        }
+    }
+
+    private func saveChanges() {
+        guard let editingID else { return }
+        CustomWallpaperConfig.save(config(id: editingID, name: editingName))
+        NotificationCenter.default.post(name: .customWallpapersChanged, object: nil)
+        WallpaperService.shared.customWallpaperChanged(editingID)
+    }
+
+    func saveCustomWallpaper() {
+        let name = saveName.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty else { return }
+        let config = config(id: UUID(), name: name)
         CustomWallpaperConfig.save(config)
         NotificationCenter.default.post(name: .customWallpapersChanged, object: nil)
+        editingID = config.id
+        editingName = name
         saveName = ""
     }
 }

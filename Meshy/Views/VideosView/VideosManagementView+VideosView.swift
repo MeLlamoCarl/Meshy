@@ -187,7 +187,7 @@ extension VideosManagementView {
                             value: downloadService.downloadingVideos
                         )
                     }
-                    .popover(isPresented: $shouldShowDownloadingVideos) {
+                    .popover(isPresented: $shouldShowDownloadingVideos, arrowEdge: .bottom) {
                         downloadsView
                     }
 

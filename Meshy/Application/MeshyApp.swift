@@ -79,64 +79,17 @@ struct MeshyApp: App {
                 .frame(width: 400)
         }
 
-        meshCreatorWindow
         fluidEditorWindow
         flowEditorWindow
-    }
-
-    var meshCreatorWindow: some Scene {
-        WindowGroup("Mesh Creator") {
-            DeepLinkMeshCreatorView()
-                .navigationTitle("Meshy – Mesh Creator")
-                .frame(minWidth: 400, minHeight: 400)
-                .onDisappear {
-                    if NSApp.windows.compactMap(\.identifier)
-                        .filter({
-                            $0.rawValue.hasPrefix("SwiftUI") || $0.rawValue.hasPrefix("Meshy") })
-                        .count == 0
-                    {
-                        NSApp.setActivationPolicy(.accessory)
-                    }
-                }
-                .onAppear {
-                    NSApp.setActivationPolicy(.regular)
-                }
-        }
-        .handlesExternalEvents(matching: Set(arrayLiteral: WindowManager.MeshCreator.rawValue))
-        .windowToolbarStyle(.unifiedCompact)
-    }
-
-    struct DeepLinkMeshCreatorView: View {
-        @State
-        private var size: MeshSize?
-
-        var body: some View {
-            Group {
-                if let size {
-                    MeshCreatorView(size: size)
-                } else {
-                    ProgressView()
-                        .onOpenURL { url in
-                            let urlComponents = URLComponents(
-                                url: url,
-                                resolvingAgainstBaseURL: true
-                            )
-                            if let sizeStr = urlComponents?.queryItems?
-                                .first(where: { $0.name == "size" })?.value,
-                                let size = Int(sizeStr)
-                            {
-                                self.size = MeshSize(width: size, height: size)
-                            }
-                        }
-                }
-            }
-        }
     }
 
     var fluidEditorWindow: some Scene {
         WindowGroup("Fluid Editor") {
             FluidEditorView()
                 .navigationTitle("Meshy – Fluid Editor")
+                // Opening the editor again reuses its window.
+                .handlesExternalEvents(preferring: [WindowManager.FluidEditor.rawValue],
+                                       allowing: [WindowManager.FluidEditor.rawValue])
                 .onDisappear {
                     if NSApp.windows.compactMap(\.identifier)
                         .filter({
@@ -158,6 +111,9 @@ struct MeshyApp: App {
         WindowGroup("Flow Editor") {
             FlowEditorView()
                 .navigationTitle("Meshy – Flow Editor")
+                // Opening the editor again reuses its window.
+                .handlesExternalEvents(preferring: [WindowManager.FlowEditor.rawValue],
+                                       allowing: [WindowManager.FlowEditor.rawValue])
                 .onDisappear {
                     if NSApp.windows.compactMap(\.identifier)
                         .filter({
@@ -178,18 +134,9 @@ struct MeshyApp: App {
 
 enum WindowManager: String, CaseIterable {
     case Main = "MainView"
-    case MeshCreator = "MeshCreatorView"
     case Videos = "VideosView"
     case FluidEditor = "FluidEditorView"
     case FlowEditor = "FlowEditorView"
-
-    func open(query: URLQueryItem...) {
-        var urlComponents = URLComponents(string: urlStr)
-        urlComponents?.queryItems = query
-        if let url = urlComponents?.url {
-            NSWorkspace.shared.open(url)
-        }
-    }
 
     func open() {
         if let url = URL(string: urlStr) {

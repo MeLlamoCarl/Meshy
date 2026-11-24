@@ -44,9 +44,14 @@ struct CustomWallpaperConfig: Codable, Identifiable {
         return configs
     }
 
+    /// Adds a new custom, or replaces the one with the same ID.
     static func save(_ config: CustomWallpaperConfig) {
         var configs = loadAll()
-        configs.append(config)
+        if let index = configs.firstIndex(where: { $0.id == config.id }) {
+            configs[index] = config
+        } else {
+            configs.append(config)
+        }
         if let data = try? JSONEncoder().encode(configs) {
             try? data.write(to: storageURL)
         }

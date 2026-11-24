@@ -44,6 +44,7 @@ struct FlowCustomConfig: Codable, Identifiable, Equatable {
         return configs.map { config in
             var config = config
             config.settings = config.settings.validated
+            config.palette.drops = Array(config.palette.drops.prefix(FlowSettings.standardDropCount))
             return config
         }
     }
@@ -87,6 +88,6 @@ private extension FlowPalette {
 
 private extension FlowSettings {
     var hashableValues: [Double] {
-        [Double(dropCount), minSize, maxSize, speed]
+        [minSize, maxSize, speed]
     }
 }

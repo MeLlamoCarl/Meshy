@@ -29,7 +29,10 @@ final class FluidWindow: WallpaperWindow {
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
             guard self?.viewModel != nil else { return }
             // Read the latest stored selection — the user may have changed it during startup.
-            viewModel.apply(WallpaperService.storedSelection(for: screen.uuidString) ?? selection)
+            // Colors applied from the Fluid Editor meanwhile stay.
+            if !viewModel.hasEditorColors {
+                viewModel.apply(WallpaperService.storedSelection(for: screen.uuidString) ?? selection)
+            }
             viewModel.setTimer()
         }
     }

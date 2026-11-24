@@ -34,7 +34,7 @@ final class FlowThumbnails: ObservableObject {
         let job = pending.removeFirst()
         renderTask = Task { @MainActor in
             let cgImage = await Task.detached(priority: .utility) {
-                FlowRenderer.still(palette: job.palette, settings: job.settings, width: 256, height: 160, time: 5)
+                FlowRenderer.still(palette: job.palette, settings: job.settings, width: 256, height: 160)
             }.value
             if let cgImage {
                 images[job.key] = NSImage(cgImage: cgImage, size: NSSize(width: 128, height: 80))

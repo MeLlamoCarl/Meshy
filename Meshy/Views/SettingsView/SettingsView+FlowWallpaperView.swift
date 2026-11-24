@@ -61,7 +61,7 @@ extension SettingsView {
                             .symbolRenderingMode(.multicolor)
                     }
                 } footer: {
-                    Text("Flow shows glowing drops of liquid drifting over a liquid background. Speed applies to the presets; custom Flows keep their own.")
+                    Text("Flow shows glowing drops of color that drift, merge and dissolve over a soft gradient. Speed applies to the presets; custom Flows keep their own.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }

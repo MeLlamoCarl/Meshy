@@ -13,10 +13,11 @@ engine, back to life. Meshy keeps the same idea (living, color-shifting mesh gra
 wallpapers right on your desktop) working on newer versions of macOS, with a few small tweaks and
 improvements along the way:
 
-- Flow: soft liquid drops that drift around the screen, flatten against its edges and leave a
-  glowing trail, with a Flow Editor to pick your own colors, drop count, size and speed
+- Flow: soft drops of color that drift around the screen, merge, split and dissolve in a glowing
+  halo, with a Flow Editor to pick your own colors, size and speed
 - Each display can have its own theme, and your choice is remembered across restarts
 - A Fluid Editor to design and save your own gradients
+- Export any Fluid or Flow from its editor as an image
 - Video wallpapers from Pixabay (with your own free API key) or from your own files
 - Pauses automatically while an app is fullscreen
 - Lets you know when a new version is out (you can turn this off in Settings › General)

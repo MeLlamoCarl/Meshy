@@ -56,6 +56,8 @@ struct FlowEditorView: View {
     @State private var showSaveDialog: Bool = false
     @State private var saveName: String = ""
     @State private var showAppliedBadge: Bool = false
+    @State private var badgeText: String = ""
+    @State private var showExport: Bool = false
     @State private var previewID = UUID()
     /// The preview is created once the window is on screen: an MTKView made while its window
     /// is still being set up never starts drawing (blank preview until Restart).
@@ -71,7 +73,7 @@ struct FlowEditorView: View {
             }
 
             if showAppliedBadge {
-                Label("Applied to Desktop", systemImage: "checkmark.circle.fill")
+                Label(badgeText, systemImage: "checkmark.circle.fill")
                     .font(.caption.bold())
                     .padding(8)
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
@@ -90,7 +92,7 @@ struct FlowEditorView: View {
                 } label: {
                     Label("Restart", systemImage: "arrow.counterclockwise")
                 }
-                .help("Pour the drops in again")
+                .help("Start over with new motion")
             }
 
             ToolbarItem(id: "colors") {
@@ -99,7 +101,7 @@ struct FlowEditorView: View {
                 } label: {
                     Label("Colors", systemImage: "paintpalette.fill")
                 }
-                .popover(isPresented: $showColors) {
+                .popover(isPresented: $showColors, arrowEdge: .bottom) {
                     colorsPopover
                 }
             }
@@ -110,7 +112,7 @@ struct FlowEditorView: View {
                 } label: {
                     Label("Drops", systemImage: "drop.fill")
                 }
-                .popover(isPresented: $showDrops) {
+                .popover(isPresented: $showDrops, arrowEdge: .bottom) {
                     dropsPopover
                 }
             }
@@ -122,6 +124,20 @@ struct FlowEditorView: View {
                     Label("Apply to Wallpaper", systemImage: "rectangle.on.rectangle")
                 }
                 .buttonStyle(.borderedProminent)
+            }
+
+            ToolbarItem(id: "export", placement: .primaryAction) {
+                Button {
+                    showExport.toggle()
+                } label: {
+                    Label("Export Image...", systemImage: "photo")
+                }
+                .help("Export Image…")
+                .popover(isPresented: $showExport, arrowEdge: .bottom) {
+                    ImageExportView(defaultName: "Meshy Flow", canShuffle: true, render: renderImage) {
+                        showBadge("Image Saved")
+                    }
+                }
             }
 
             ToolbarItem(id: "save", placement: .primaryAction) {
@@ -199,7 +215,7 @@ struct FlowEditorView: View {
             }))
 
             HStack {
-                colorRow("Background Liquid", color: Binding(get: { palette.liquid }, set: { color in
+                colorRow("Background 2", color: Binding(get: { palette.liquid }, set: { color in
                     palette.liquid = color
                     isLiquidAutomatic = false
                 }))
@@ -209,7 +225,7 @@ struct FlowEditorView: View {
                 }
                 .controlSize(.small)
                 .disabled(isLiquidAutomatic)
-                .help("A lighter or darker shade of the background")
+                .help("A neighbouring shade of the background")
             }
 
             colorRow("Halo", color: $palette.halo)
@@ -239,11 +255,11 @@ struct FlowEditorView: View {
                 } label: {
                     Image(systemName: "plus")
                 }
-                .disabled(palette.drops.count >= FlowSettings.dropCountRange.upperBound)
+                .disabled(palette.drops.count >= FlowSettings.standardDropCount)
             }
             .controlSize(.small)
 
-            Text("Each drop takes the next color in turn.")
+            Text("With a second color, drops of both colors mix as they meet.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -275,16 +291,6 @@ struct FlowEditorView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Drops")
                 .font(.headline)
-
-            Stepper(value: $settings.dropCount, in: FlowSettings.dropCountRange) {
-                HStack {
-                    Label("Count", systemImage: "drop.fill")
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Text("\(settings.dropCount)")
-                        .monospacedDigit()
-                }
-            }
 
             sliderRow("Smallest", icon: "circle.fill", value: Binding(get: { settings.minSize }, set: { size in
                 settings.minSize = size
@@ -365,6 +371,21 @@ struct FlowEditorView: View {
                 try? await service.start(.flow)
             }
             service.targetFlowViewModel?.apply(config)
+            showBadge("Applied to Desktop")
+        }
+    }
+
+    private func renderImage(width: Int, height: Int, seed: UInt64) async -> CGImage? {
+        let palette = palette, settings = settings
+        return await Task.detached(priority: .userInitiated) {
+            FlowRenderer.still(palette: palette, settings: settings, width: width, height: height,
+                               seed: seed, grain: 0.012)
+        }.value
+    }
+
+    private func showBadge(_ text: String) {
+        badgeText = text
+        Task { @MainActor in
             withAnimation { showAppliedBadge = true }
             try? await Task.sleep(nanoseconds: 2_000_000_000)
             withAnimation { showAppliedBadge = false }

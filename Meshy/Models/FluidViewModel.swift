@@ -155,9 +155,28 @@ class FluidViewModel: ObservableObject {
         GameMode.isOtherAppFullScreen(on: screenID)
     }
 
-    func applyColors(_ newColors: MeshColorGrid) {
+    /// Colors applied from the Fluid Editor; a starting window leaves them in place.
+    private(set) var hasEditorColors = false
+
+    /// Shows the Fluid Editor's colors and settings. Like a custom, the timer doesn't replace them.
+    func apply(_ config: CustomWallpaperConfig, colors newColors: MeshColorGrid) {
+        show(newColors, config: config)
+        meshPreviewID = UUID() // right away, rather than as each point gets there
+        hasEditorColors = true
+        selection = .custom(config.id)
+        currentPalette = config.hues.count == 1 ? config.hues.first : nil
+        scheduleDesktopPictureUpdate()
+    }
+
+    /// A live mesh takes new colors as it goes, but keeps its grid size and grain: start a new one
+    /// when those change.
+    private func show(_ newColors: MeshColorGrid, config: CustomWallpaperConfig?) {
+        let needsNewMesh = newColors.width != colors.width || newColors.height != colors.height
+            || config?.grainAlpha != settingsOverride?.grainAlpha
         colors = newColors
         meshRandomizer = .withMeshColors(newColors)
+        settingsOverride = config
+        if needsNewMesh { meshPreviewID = UUID() }
     }
 
     /// Applies a selection to this screen. Unknown customs (e.g. deleted) fall back to random.
@@ -190,16 +209,14 @@ class FluidViewModel: ObservableObject {
 
     private func applyConfig(_ config: CustomWallpaperConfig) {
         let hues = config.hues.isEmpty ? [Hue.blue] : config.hues
-        colors = MeshKit.generate(
+        show(MeshKit.generate(
             palette: hues,
             luminosity: config.luminosity,
             size: MeshSize(width: config.meshSize, height: config.meshSize),
             withRandomizedLocations: true
-        )
-        meshRandomizer = .withMeshColors(colors)
+        ), config: config)
         currentPalette = hues.count == 1 ? hues.first : nil
         selection = .custom(config.id)
-        settingsOverride = config
         scheduleDesktopPictureUpdate()
     }
 
@@ -232,17 +249,15 @@ class FluidViewModel: ObservableObject {
 
         let newPalette = palette ?? allowedPalettes.randomElement() ?? .blue
 
-        colors = MeshKit.generate(
+        show(MeshKit.generate(
             palette: newPalette,
             luminosity: luminosity,
             size: MeshSize(width: meshDimension, height: meshDimension),
             withRandomizedLocations: true
-        )
-        meshRandomizer = .withMeshColors(colors)
+        ), config: nil)
 
         currentPalette = newPalette
         selection = palette.map { .hue($0) } ?? .random
-        settingsOverride = nil
         scheduleDesktopPictureUpdate()
     }
 
