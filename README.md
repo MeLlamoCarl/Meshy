@@ -19,7 +19,9 @@ improvements along the way:
 - A Fluid Editor to design and save your own gradients
 - Export any Fluid or Flow from its editor as an image
 - Video wallpapers from Pixabay (with your own free API key) or from your own files
-- Pauses automatically while an app is fullscreen
+- Pauses automatically when you can't see it (an app in fullscreen, windows covering the desktop, the
+  display asleep), and keeps frame rates and video sizes light so it runs well on older Macs too
+- Keeps the menu bar tint in step with the wallpaper on every Space
 - Lets you know when a new version is out (you can turn this off in Settings › General)
 
 Meshy is not affiliated with or endorsed by the original author. See [NOTICE.md](NOTICE.md) for
