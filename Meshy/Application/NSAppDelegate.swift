@@ -55,10 +55,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    @MainActor
-    func applicationWillTerminate(_: Notification) {
-        WallpaperService.shared.revertDesktopPicture()
-    }
+    // Quitting leaves Meshy's last picture on the desktop: macOS only lets Meshy change the active
+    // Space's picture, so reverting here put the original back on one Space and left snapshots on
+    // the others. Stopping the wallpaper (app still running) reverts each Space as it's visited.
 
     func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows _: Bool) -> Bool {
         false

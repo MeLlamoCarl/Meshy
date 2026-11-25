@@ -55,6 +55,15 @@ class VideoWindow: WallpaperWindow {
         if let playerItem {
             playerLooper = AVPlayerLooper(player: player, templateItem: playerItem)
         }
+        // Decoding stops while nobody can see the video (covered, full screen apps, displays asleep).
+        activity.onChange = { [weak self] state in
+            guard let player = self?.player else { return }
+            if state.isPaused {
+                player.pause()
+            } else if player.rate == 0 {
+                player.play()
+            }
+        }
 
         if let videoFile {
             let screenID = screenID

@@ -8,6 +8,7 @@
 import AVKit
 import Foundation
 import PixabayKit
+import VideoToolbox
 
 final class VideoDownloadService: ObservableObject {
     @Published
@@ -71,8 +72,22 @@ final class VideoDownloadService: ObservableObject {
         NotificationCenter.default.post(name: .videosChanged, object: nil)
     }
 
+    /// Pixabay's 4K ("large") only where a screen is more than 2560 px across: on smaller screens
+    /// a 1920 px video looks the same and is several times cheaper to decode and scale.
+    @MainActor
+    static func preferredItem(of video: Video) -> Video.Item.VideoItem? {
+        let widest = NSScreen.screens.map { $0.frame.width * $0.backingScaleFactor }.max() ?? 0
+        let order: [Video.Item] = widest > 2560 ? [.large, .medium] : [.medium, .large]
+        return order.lazy.compactMap { video.items[$0] }.first { $0.width > 0 }
+    }
+
+    /// Whether this Mac decodes HEVC in hardware (Intel Macs before 2017 do it on the CPU).
+    static var decodesHEVCInHardware: Bool {
+        VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC)
+    }
+
     func download(_ video: Video) async throws {
-        guard let url = video.items[.large]?.url else { throw URLError(.badURL) }
+        guard let url = await Self.preferredItem(of: video)?.url else { throw URLError(.badURL) }
 
         func updateState(_ state: State) {
             DispatchQueue.main.async { [weak self] in
@@ -86,21 +101,10 @@ final class VideoDownloadService: ObservableObject {
             var downloadRequest = URLRequest(url: url)
             downloadRequest.cachePolicy = .reloadIgnoringCacheData
 
-            var fastRunningProgress: Double = 0
-            let (asyncBytes, urlResponse) = try await URLSession.shared.bytes(for: downloadRequest)
-            let length = (urlResponse.expectedContentLength)
-            var data = Data()
-            data.reserveCapacity(Int(length))
-
-            for try await byte in asyncBytes {
-                data.append(byte)
-                let progress = Double(data.count) / Double(length)
-
-                if Int(fastRunningProgress * 100) != Int(progress * 100) {
-                    updateState(.downloading(progress, url))
-                    fastRunningProgress = progress
-                }
-            }
+            // A download task writes to disk as it goes (reading the bytes one by one kept a CPU
+            // core busy and the whole video in memory).
+            let progress = DownloadProgress { updateState(.downloading($0, url)) }
+            let (downloadedFile, _) = try await URLSession.shared.download(for: downloadRequest, delegate: progress)
 
             let videoFile = FileManager.default.temporaryDirectory
                 .appendingPathComponent("video-download-\(video.id).mp4")
@@ -114,7 +118,7 @@ final class VideoDownloadService: ObservableObject {
                 try FileManager.default.removeItem(at: destinationUrl)
             }
 
-            try data.write(to: videoFile)
+            try FileManager.default.moveItem(at: downloadedFile, to: videoFile)
             print("Downloaded video", videoFile.path)
 
             updateState(.processing)
@@ -156,6 +160,8 @@ final class VideoDownloadService: ObservableObject {
                 "output-\(Int(Date().timeIntervalSinceReferenceDate))-\(UUID().uuidString).mp4"
             )
 
+        // HEVC decoded on the CPU costs more than the space it saves.
+        guard Self.decodesHEVCInHardware else { return url }
         let preset = AVAssetExportPresetHEVCHighestQuality
         let outFileType = AVFileType.m4v
 
@@ -205,5 +211,26 @@ final class VideoDownloadService: ObservableObject {
         await exporter.export()
 
         return outputUrl
+    }
+}
+
+/// Reports a download task's progress in whole percents.
+private final class DownloadProgress: NSObject, URLSessionTaskDelegate {
+    private let onProgress: (Double) -> Void
+    private var observation: NSKeyValueObservation?
+    private var lastPercent = -1
+
+    init(_ onProgress: @escaping (Double) -> Void) {
+        self.onProgress = onProgress
+    }
+
+    func urlSession(_: URLSession, didCreateTask task: URLSessionTask) {
+        observation = task.progress.observe(\.fractionCompleted) { [weak self] progress, _ in
+            guard let self else { return }
+            let percent = Int(progress.fractionCompleted * 100)
+            guard percent != self.lastPercent else { return }
+            self.lastPercent = percent
+            self.onProgress(progress.fractionCompleted)
+        }
     }
 }

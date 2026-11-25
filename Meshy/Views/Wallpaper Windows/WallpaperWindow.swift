@@ -18,6 +18,15 @@ class WallpaperWindow: NSWindow {
     /// `NSScreen.uuidString` of the screen this window covers.
     let screenID: String
 
+    /// When to draw and how often (pauses when covered, in full screen apps, while the displays
+    /// sleep; caps the frame rate). Subclasses apply its state to their content.
+    private(set) lazy var activity = WallpaperActivity(window: self, screenID: screenID)
+
+    override func close() {
+        activity.invalidate()
+        super.close()
+    }
+
     var targetScreen: NSScreen? {
         NSScreen.screens.first { $0.uuidString == screenID }
     }
@@ -92,11 +101,34 @@ class WallpaperWindow: NSWindow {
         guard let screen = targetScreen else { return }
         var frame = screen.frame
         if Self.showsMenuBarBackground {
-            frame.size.height -= max(0, screen.frame.maxY - screen.visibleFrame.maxY)
+            frame.size.height -= Self.menuBarHeight(on: screen)
         }
         if frame != self.frame {
             setFrame(frame, display: true)
         }
+    }
+
+    /// Height of the menu bar macOS draws on `screen`. The space `visibleFrame` reserves can be
+    /// taller (40 pt for a 39 pt menu bar on macOS 27 with a notch), which left a thin line of the
+    /// still desktop picture under the menu bar, so measure the menu bar window itself.
+    private static func menuBarHeight(on screen: NSScreen) -> CGFloat {
+        let reserved = max(0, screen.frame.maxY - screen.visibleFrame.maxY)
+        guard reserved > 0,
+              let primaryHeight = NSScreen.screens.first?.frame.height,
+              let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]]
+        else { return reserved }
+        // Window bounds use top-left coordinates from the primary screen.
+        let top = primaryHeight - screen.frame.maxY
+        let menuBarLevel = Int(CGWindowLevelForKey(.mainMenuWindow))
+        for info in windows where info[kCGWindowLayer as String] as? Int == menuBarLevel
+            && info[kCGWindowOwnerName as String] as? String == "Window Server" {
+            guard let dict = info[kCGWindowBounds as String] as? NSDictionary,
+                  let bounds = CGRect(dictionaryRepresentation: dict),
+                  abs(bounds.minY - top) < 1, abs(bounds.minX - screen.frame.minX) < 1,
+                  bounds.height > 0, bounds.height <= reserved else { continue }
+            return bounds.height
+        }
+        return reserved
     }
 
     /// Restarts animating Metal views (toggling `isPaused` recreates their display link) and redraws
@@ -121,7 +153,7 @@ class WallpaperWindow: NSWindow {
         }
     }
 
-    private static func metalViews(in view: NSView) -> [MTKView] {
+    static func metalViews(in view: NSView) -> [MTKView] {
         (view as? MTKView).map { [$0] } ?? view.subviews.flatMap(metalViews(in:))
     }
 

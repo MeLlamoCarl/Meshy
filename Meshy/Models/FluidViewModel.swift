@@ -75,8 +75,11 @@ class FluidViewModel: ObservableObject {
     var currentPalette: Hue?
     @Published
     var meshPreviewID: UUID = UUID()
+    /// Set by the window's `WallpaperActivity`.
     @Published
     var isPaused: Bool = false
+    @Published
+    var maxFramesPerSecond: Int = 60
     /// What this screen is set to. The timer and appearance changes respect it.
     private(set) var selection: FluidSelection = .random
     /// Render settings (grain, subdivisions, speed) that override the global ones for this
@@ -86,7 +89,6 @@ class FluidViewModel: ObservableObject {
     /// `NSScreen.uuidString` of the screen this view model renders on.
     var screenID: String?
 
-    private var gameModeObservers: [Any] = []
     var shouldUpdateDesktopPicture: Bool = false
     /// Pending desktop picture update; a newer palette cancels it so it can't overwrite the
     /// newer colors (that left the menu bar tinted with the previous theme).
@@ -115,44 +117,6 @@ class FluidViewModel: ObservableObject {
         timer = nil
         desktopPictureTask?.cancel()
         desktopPictureTask = nil
-        stopGameModeMonitoring()
-    }
-
-    // MARK: - Game Mode monitoring
-
-    func startGameModeMonitoring() {
-        // Register default so the feature is ON out of the box
-        UserDefaults.standard.register(defaults: ["pauseOnGameMode": true])
-
-        let nc = NSWorkspace.shared.notificationCenter
-        let names: [NSNotification.Name] = [
-            NSWorkspace.didActivateApplicationNotification,
-            NSWorkspace.didDeactivateApplicationNotification,
-            NSWorkspace.activeSpaceDidChangeNotification,
-        ]
-        gameModeObservers = names.map { name in
-            nc.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
-                self?.updatePauseState()
-            }
-        }
-    }
-
-    func stopGameModeMonitoring() {
-        let nc = NSWorkspace.shared.notificationCenter
-        gameModeObservers.forEach { nc.removeObserver($0) }
-        gameModeObservers = []
-    }
-
-    func updatePauseState() {
-        guard UserDefaults.standard.bool(forKey: "pauseOnGameMode") else {
-            if isPaused { isPaused = false }
-            return
-        }
-        isPaused = isOtherAppFullScreen()
-    }
-
-    private func isOtherAppFullScreen() -> Bool {
-        GameMode.isOtherAppFullScreen(on: screenID)
     }
 
     /// Colors applied from the Fluid Editor; a starting window leaves them in place.

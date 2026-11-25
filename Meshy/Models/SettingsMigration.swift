@@ -79,10 +79,10 @@ enum SettingsMigration {
         validateNumber("FWSubdivisions") { $0 > 0 }
         validateNumber("FWGrainAlpha") { (0 ... 1).contains($0) }
         validateNumber("FWCustomSpeed") { $0 >= 0 }
-        validateNumber("FWFramerate") { $0 > 0 }
+        validateNumber("FWFramerate") { [30, 60, 120].contains($0) } // 240 was offered before
         validateNumber("FWPaletteChangeInterval") { $0 >= 5 }
         validateNumber("FlowSpeed") { FlowSettings.speedRange.contains($0) }
-        validateNumber("FlowFramerate") { $0 > 0 }
+        validateNumber("FlowFramerate") { [30, 60, 120].contains($0) }
 
         validateRawValue("FWAnimationSpeed") { AnimationSpeed(rawValue: $0) != nil }
         validateRawValue("FWColorScheme") { WallpaperColorScheme(rawValue: $0) != nil }

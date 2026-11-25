@@ -12,8 +12,9 @@ extension Notification.Name {
     static let videosChanged = Notification.Name("videosChanged")
 }
 
-/// Imports the user's own videos as wallpapers. Every video ends up as MP4 with H.264 or HEVC
-/// video, like Pixabay's downloads, so playback stays hardware-decoded and efficient:
+/// Imports the user's own videos as wallpapers. Every video ends up as MP4 with H.264 or HEVC (HEVC
+/// only where the Mac decodes it in hardware), like Pixabay's downloads, so playback stays
+/// hardware-decoded and efficient:
 /// MP4/M4V in those codecs is copied as is, MOV in those codecs is re-wrapped without
 /// re-encoding, anything else AVFoundation can read is converted to H.264 MP4.
 /// The original file is never moved or modified.
@@ -101,7 +102,9 @@ final class VideoImportService: ObservableObject {
         }
 
         let codec = try await track.load(.formatDescriptions).first.map(CMFormatDescriptionGetMediaSubType)
-        let isEfficientCodec = codec == kCMVideoCodecType_H264 || codec == kCMVideoCodecType_HEVC
+        // HEVC stays HEVC only where it's decoded in hardware; elsewhere it becomes H.264.
+        let isEfficientCodec = codec == kCMVideoCodecType_H264
+            || (codec == kCMVideoCodecType_HEVC && VideoDownloadService.decodesHEVCInHardware)
         let isMP4 = ["mp4", "m4v"].contains(url.pathExtension.lowercased())
 
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

@@ -26,8 +26,23 @@ extension NSScreen {
 /// tint (with "Show menu bar background") and Mission Control's picture from them.
 @MainActor
 enum DesktopSnapshot {
+    /// Fluid snapshots. In the caches, not the temporary directory: they stay on the desktop after
+    /// Meshy quits, and macOS clears the temporary directory from time to time.
     static var folder: URL {
-        FileManager.default.temporaryDirectory.appendingPathComponent("Meshy Desktop Pictures", isDirectory: true)
+        AppPaths.caches.appendingPathComponent("Desktop Pictures", isDirectory: true)
+    }
+
+    /// Last picture Meshy set on each screen. macOS only changes the picture of the Space that is
+    /// active, so `WallpaperService` sets it again on the other Spaces when they become active.
+    private(set) static var shownPictures: [String: URL] = [:]
+
+    private static func show(_ picture: URL, on screen: NSScreen) throws {
+        try NSWorkspace.shared.setDesktopImageURL(picture, for: screen)
+        shownPictures[screen.uuidString] = picture
+    }
+
+    static func forgetShownPictures() {
+        shownPictures = [:]
     }
 
     /// Writes a snapshot under a new, unique name, makes it the screen's desktop picture and only
@@ -41,7 +56,7 @@ enum DesktopSnapshot {
         let url = screenFolder.appendingPathComponent("Meshy \(UUID().uuidString).png")
         try await write(url)
         guard FileManager.default.fileExists(atPath: url.path) else { return }
-        try NSWorkspace.shared.setDesktopImageURL(url, for: screen)
+        try show(url, on: screen)
 
         removeSnapshots(in: screenFolder, except: url)
     }
@@ -67,7 +82,7 @@ enum DesktopSnapshot {
             try await write(url)
             guard FileManager.default.fileExists(atPath: url.path) else { return }
         }
-        try NSWorkspace.shared.setDesktopImageURL(url, for: screen)
+        try show(url, on: screen)
         removeSnapshots(in: folder.appendingPathComponent(screenID, isDirectory: true), except: nil)
     }
 
@@ -100,7 +115,7 @@ enum DesktopSnapshot {
                 removeFlowStills(prefix: custom, keeping: key)
             }
         }
-        try NSWorkspace.shared.setDesktopImageURL(url, for: screen)
+        try show(url, on: screen)
         try? FileManager.default.removeItem(at: oldFlowStillsFolder)
         removeSnapshots(in: folder.appendingPathComponent(screenID, isDirectory: true), except: nil)
     }
@@ -143,6 +158,7 @@ class WallpaperService: ObservableObject {
         }
     }
     private var screenObserver: Any?
+    private var spaceObserver: Any?
     /// Increments per start/stop so only the latest one clears `isLoading`.
     private var loadingGeneration = 0
 
@@ -196,8 +212,7 @@ class WallpaperService: ObservableObject {
 
     /// Re-checks every wallpaper's "pause when an app is full screen" state.
     func updatePauseStates() {
-        fluidViewModels.forEach { $0.updatePauseState() }
-        flowViewModels.forEach { $0.updatePauseState() }
+        windowControllers.values.forEach { ($0.window as? WallpaperWindow)?.activity.update() }
     }
 
     init() {
@@ -216,6 +231,14 @@ class WallpaperService: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in self?.screensDidChange() }
+        }
+
+        spaceObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.activeSpaceDidChange() }
         }
 
         let lastTypeRaw = UserDefaults.standard.string(forKey: "lastWallpaperType")
@@ -421,6 +444,45 @@ class WallpaperService: ObservableObject {
         if isUsingWallpaper {
             revertDesktopPicture()
         }
+        DesktopSnapshot.forgetShownPictures()
+    }
+
+    // MARK: - Spaces
+
+    /// macOS gives each Space its own desktop picture and Meshy can only set the active one's, so
+    /// a Space Meshy last touched earlier keeps an old snapshot (wrong menu bar tint), and one it
+    /// touched before the wallpaper stopped keeps a snapshot afterwards. Fix it on arrival; again
+    /// shortly after, in case the switch hadn't finished when the notification came.
+    private func activeSpaceDidChange() {
+        syncDesktopPictures()
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            syncDesktopPictures()
+        }
+    }
+
+    private func syncDesktopPictures() {
+        let workspace = NSWorkspace.shared
+        for screen in NSScreen.screens {
+            let id = screen.uuidString
+            let current = workspace.desktopImageURL(for: screen)
+            if selectedWallpaper != nil {
+                guard let shown = DesktopSnapshot.shownPictures[id],
+                      current.map({ !Self.isSameFile($0, shown) }) ?? true,
+                      FileManager.default.fileExists(atPath: shown.path) else { continue }
+                if originalDesktopPictures[id] == nil { rememberDesktopPicture(screen) }
+                try? workspace.setDesktopImageURL(shown, for: screen)
+            } else {
+                guard let current, Self.isMeshySnapshot(current),
+                      let original = originalDesktopPictures[id],
+                      FileManager.default.fileExists(atPath: original.path) else { continue }
+                try? workspace.setDesktopImageURL(original, for: screen)
+            }
+        }
+    }
+
+    private static func isSameFile(_ a: URL, _ b: URL) -> Bool {
+        a.standardizedFileURL.resolvingSymlinksInPath().path == b.standardizedFileURL.resolvingSymlinksInPath().path
     }
 
     private func closeWindows() {
@@ -429,12 +491,11 @@ class WallpaperService: ObservableObject {
         selectedWallpaper = nil
     }
 
-    /// Files Meshy writes as desktop pictures (snapshots of the live wallpaper) live in the
-    /// temporary directory or, for video frames and Flow stills, in Meshy's caches; they are never the user's
-    /// own picture.
+    /// Files Meshy writes as desktop pictures (snapshots of the live wallpaper) live in Meshy's
+    /// caches (older versions used the temporary directory); they are never the user's own picture.
     private static func isMeshySnapshot(_ url: URL) -> Bool {
         let path = url.standardizedFileURL.resolvingSymlinksInPath().path
-        return [FileManager.default.temporaryDirectory, DesktopSnapshot.videoFramesFolder,
+        return [FileManager.default.temporaryDirectory, DesktopSnapshot.folder, DesktopSnapshot.videoFramesFolder,
                 DesktopSnapshot.flowStillsFolder, DesktopSnapshot.oldFlowStillsFolder]
             .contains { path.hasPrefix($0.resolvingSymlinksInPath().path) }
     }

@@ -143,10 +143,11 @@ extension SettingsView {
                             .tag(30)
                         Text("60 FPS")
                             .tag(60)
-                        Text("120 FPS")
-                            .tag(120)
-                        Text("240 FPS")
-                            .tag(240)
+                        // Only where a screen can show it (it's capped to the refresh rate anyway).
+                        if WallpaperActivity.anyScreenAbove60Hz || fwFramerate == 120 {
+                            Text("120 FPS")
+                                .tag(120)
+                        }
                     }
                     .pickerStyle(.menu)
                 } header: {

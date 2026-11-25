@@ -42,6 +42,10 @@ struct ScreenSaverView: View {
         viewModel.settingsOverride?.grainAlpha ?? Float(wallpaperGrainAlpha)
     }
 
+    private var framesPerSecond: Int {
+        min(max(fwFramerate, 1), viewModel.maxFramesPerSecond)
+    }
+
     private var subdivisions: Int {
         viewModel.settingsOverride.map { Int($0.subdivisions) } ?? wallpaperSubdivisions
     }
@@ -79,7 +83,7 @@ struct ScreenSaverView: View {
                 Mesh(
                     colors: viewModel.colors,
                     animatorConfiguration: .init(
-                        framesPerSecond: fwFramerate,
+                        framesPerSecond: framesPerSecond,
                         animationSpeedRange: animationSpeedRange,
                         meshRandomizer: viewModel.meshRandomizer
                     ),
@@ -87,7 +91,8 @@ struct ScreenSaverView: View {
                     subdivisions: subdivisions,
                     colorSpace: colorSpace.cgColorSpace
                 )
-                .id(viewModel.meshPreviewID)
+                // MeshGradient can lower a running mesh's frame rate but not raise it: restart.
+                .id("\(viewModel.meshPreviewID)-\(framesPerSecond)")
                 .transition(.opacity)
                 .opacity(isStartingUp ? 0 : 1)
                 .onAppear {

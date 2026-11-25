@@ -64,8 +64,11 @@ final class FlowViewModel: ObservableObject {
     private(set) var palette: FlowPalette = FlowPreset.all[0].palette
     @Published
     private(set) var settings: FlowSettings = .default
+    /// Set by the window's `WallpaperActivity`.
     @Published
     var isPaused: Bool = false
+    @Published
+    var maxFramesPerSecond: Int = 60
     /// The preset shown by the 🎲 rotation or a preset selection.
     private(set) var currentPreset: FlowPreset?
     private(set) var selection: FlowSelection = .random
@@ -75,7 +78,6 @@ final class FlowViewModel: ObservableObject {
     /// The Flow Editor's applied, unsaved colors.
     private var unsavedConfig: FlowCustomConfig?
     private var timer: Timer?
-    private var gameModeObservers: [Any] = []
     private var desktopPictureTask: Task<Void, Never>?
 
     init(screenID: String) {
@@ -87,7 +89,6 @@ final class FlowViewModel: ObservableObject {
         timer = nil
         desktopPictureTask?.cancel()
         desktopPictureTask = nil
-        stopGameModeMonitoring()
     }
 
     // MARK: - Selection
@@ -171,35 +172,6 @@ final class FlowViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Game Mode
-
-    func startGameModeMonitoring() {
-        UserDefaults.standard.register(defaults: ["pauseOnGameMode": true])
-        let center = NSWorkspace.shared.notificationCenter
-        let names: [NSNotification.Name] = [
-            NSWorkspace.didActivateApplicationNotification,
-            NSWorkspace.didDeactivateApplicationNotification,
-            NSWorkspace.activeSpaceDidChangeNotification,
-        ]
-        gameModeObservers = names.map { name in
-            center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
-                Task { @MainActor in self?.updatePauseState() }
-            }
-        }
-        updatePauseState()
-    }
-
-    private func stopGameModeMonitoring() {
-        gameModeObservers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
-        gameModeObservers = []
-    }
-
-    func updatePauseState() {
-        let paused = UserDefaults.standard.bool(forKey: "pauseOnGameMode")
-            && GameMode.isOtherAppFullScreen(on: screenID)
-        if paused != isPaused { isPaused = paused }
-    }
-
     // MARK: - Desktop picture
 
     /// Shows a still of the Flow as the desktop picture (menu bar tint, lock screen, Mission
@@ -232,36 +204,5 @@ final class FlowViewModel: ObservableObject {
                 print(error)
             }
         }
-    }
-}
-
-/// Detects another app covering a whole screen (games, full-screen video).
-enum GameMode {
-    static func isOtherAppFullScreen(on screenID: String?) -> Bool {
-        guard let screen = NSScreen.screens.first(where: { $0.uuidString == screenID }) ?? NSScreen.main,
-              let primaryScreen = NSScreen.screens.first else { return false }
-        // CGWindow bounds use a top-left origin relative to the primary screen.
-        let screenRect = CGRect(
-            x: screen.frame.minX,
-            y: primaryScreen.frame.maxY - screen.frame.maxY,
-            width: screen.frame.width,
-            height: screen.frame.height
-        )
-        let ownPID = ProcessInfo.processInfo.processIdentifier
-        let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
-            as? [[String: Any]] ?? []
-
-        for window in windowList {
-            guard let pid = window[kCGWindowOwnerPID as String] as? Int32, pid != ownPID,
-                  let bounds = window[kCGWindowBounds as String] as? [String: CGFloat],
-                  let layer = window[kCGWindowLayer as String] as? Int, layer == 0 // normal windows only
-            else { continue }
-            let windowRect = CGRect(x: bounds["X"] ?? 0, y: bounds["Y"] ?? 0,
-                                    width: bounds["Width"] ?? 0, height: bounds["Height"] ?? 0)
-            if windowRect.insetBy(dx: -1, dy: -1).contains(screenRect) {
-                return true
-            }
-        }
-        return false
     }
 }

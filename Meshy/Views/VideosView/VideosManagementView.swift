@@ -7,6 +7,7 @@
 
 import AVKit
 import PixabayKit
+import SDWebImage
 import SwiftUI
 
 struct VideosManagementView: View {
@@ -20,6 +21,9 @@ struct VideosManagementView: View {
             VideosView(category: $selectedCategory)
         }
         .navigationTitle("Videos")
+        .onAppear(perform: VideoItemView.limitMemoryCache)
+        // The previews aren't needed once the window closes (they stay in the disk cache).
+        .onDisappear { SDImageCache.shared.clearMemory() }
     }
 }
 

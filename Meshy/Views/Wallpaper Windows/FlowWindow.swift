@@ -18,9 +18,12 @@ final class FlowWindow: WallpaperWindow {
         let viewModel = FlowViewModel(screenID: screenID)
         // Read the latest stored selection: the user may have changed it while starting.
         viewModel.apply(WallpaperService.storedFlowSelection(for: screen.uuidString) ?? selection)
-        viewModel.startGameModeMonitoring()
         contentView = NSHostingView(rootView: FlowWallpaperView().environmentObject(viewModel))
         self.viewModel = viewModel
+        activity.onChange = { [weak viewModel] state in
+            viewModel?.isPaused = state.isPaused
+            viewModel?.maxFramesPerSecond = state.maxFramesPerSecond
+        }
     }
 
     override func close() {
@@ -36,14 +39,14 @@ struct FlowWallpaperView: View {
     @EnvironmentObject
     var viewModel: FlowViewModel
     @AppStorage("FlowFramerate")
-    private var framerate: Int = 60
+    private var framerate: Int = 30
 
     var body: some View {
         FlowView(
             palette: viewModel.palette,
             settings: viewModel.settings,
             isAnimating: !viewModel.isPaused,
-            framesPerSecond: max(framerate, 1),
+            framesPerSecond: min(max(framerate, 1), viewModel.maxFramesPerSecond),
             grain: 0.012
         )
         .ignoresSafeArea()

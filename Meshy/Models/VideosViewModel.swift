@@ -16,6 +16,10 @@ class VideosViewModel: ObservableObject {
     var videos: [VideoItem] = []
 
     let folder: URL
+    /// Thumbnails already made, by file path and modification date: the popover reloads the list
+    /// every time it opens, and decoding a frame of every (4K) video each time was slow.
+    private var thumbnailCache: [String: NSImage] = [:]
+    private let thumbnailLock = NSLock()
 
     struct VideoItem: Identifiable, Hashable {
         var fileUrl: URL
@@ -63,7 +67,7 @@ class VideosViewModel: ObservableObject {
         let videos = try await contents
             .concurrentMap { [weak self] video in
                 // One unreadable file shouldn't hide every other video.
-                let thumbnail = try? await self?.generateThumbnail(video.0)
+                let thumbnail = await self?.thumbnail(for: video.0)
                 return VideoItem(
                     fileUrl: video.0,
                     id: video.1,
@@ -97,6 +101,15 @@ class VideosViewModel: ObservableObject {
         }
     }
 
+    private func thumbnail(for url: URL) async -> NSImage? {
+        let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+        let key = url.path + "|" + String(modified?.timeIntervalSinceReferenceDate ?? 0)
+        if let cached = thumbnailLock.withLock({ thumbnailCache[key] }) { return cached }
+        guard let image = try? await generateThumbnail(url) else { return nil }
+        thumbnailLock.withLock { thumbnailCache[key] = image }
+        return image
+    }
+
     private func generateThumbnail(_ url: URL) async throws -> NSImage? {
         try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
@@ -105,6 +118,9 @@ class VideosViewModel: ObservableObject {
                 let assetIG = AVAssetImageGenerator(asset: asset)
                 assetIG.appliesPreferredTrackTransform = true
                 assetIG.apertureMode = AVAssetImageGenerator.ApertureMode.encodedPixels
+                // Shown small: a full-size frame of a 4K video is ~33 MB decoded, and Core
+                // Animation keeps another copy while it's on screen (12 videos used ~600 MB).
+                assetIG.maximumSize = CGSize(width: 640, height: 640)
 
                 let cmTime = CMTime(seconds: 2, preferredTimescale: 60)
                 let thumbnailImageRef: CGImage
@@ -117,10 +133,7 @@ class VideosViewModel: ObservableObject {
                 }
 
                 continuation
-                    .resume(returning: NSImage(
-                        cgImage: thumbnailImageRef,
-                        size: NSSize(width: 640, height: 480)
-                    ))
+                    .resume(returning: NSImage(cgImage: thumbnailImageRef, size: .zero))
             }
         }
     }

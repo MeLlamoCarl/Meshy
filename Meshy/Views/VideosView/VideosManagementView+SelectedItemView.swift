@@ -51,7 +51,7 @@ extension VideosManagementView {
 
                     Divider()
 
-                    if let item = video?.items[.large] {
+                    if let item = video.flatMap(VideoDownloadService.preferredItem(of:)) { // the size that gets downloaded
                         Label("\(item.width) x \(item.height)", systemImage: "rectangle.dashed")
                             .frame(maxWidth: .infinity, alignment: .leading)
                         Divider()

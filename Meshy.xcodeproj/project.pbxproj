@@ -24,6 +24,7 @@
 		AAVI00022899C1CB009E0700 /* VideoImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAVI00012899C1CB009E0700 /* VideoImportService.swift */; };
 		AAUC00022899C1CB009E0700 /* UpdateChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAUC00012899C1CB009E0700 /* UpdateChecker.swift */; };
 		AA278946289C4B15001E897B /* WallpaperService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA278945289C4B15001E897B /* WallpaperService.swift */; };
+		C0FFEE01A1B2C3D4E5F60002 /* WallpaperActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE01A1B2C3D4E5F60001 /* WallpaperActivity.swift */; };
 		AA278949289C5AC8001E897B /* VideoWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA278948289C5AC8001E897B /* VideoWindow.swift */; };
 		AA35B89B28A4075A00F7B190 /* OnboardingWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA35B89A28A4075200F7B190 /* OnboardingWindow.swift */; };
 		AA35B89D28A407DF00F7B190 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA35B89C28A407DF00F7B190 /* OnboardingView.swift */; };
@@ -104,6 +105,7 @@
 		AAVI00012899C1CB009E0700 /* VideoImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoImportService.swift; sourceTree = "<group>"; };
 		AAUC00012899C1CB009E0700 /* UpdateChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChecker.swift; sourceTree = "<group>"; };
 		AA278945289C4B15001E897B /* WallpaperService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperService.swift; sourceTree = "<group>"; };
+		C0FFEE01A1B2C3D4E5F60001 /* WallpaperActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperActivity.swift; sourceTree = "<group>"; };
 		AA278948289C5AC8001E897B /* VideoWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoWindow.swift; sourceTree = "<group>"; };
 		AA35B89A28A4075200F7B190 /* OnboardingWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWindow.swift; sourceTree = "<group>"; };
 		AA35B89C28A407DF00F7B190 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
@@ -202,6 +204,7 @@
 				AARC00012899C1CB009E0700 /* ResponseCache.swift */,
 				AAVI00012899C1CB009E0700 /* VideoImportService.swift */,
 				AA278945289C4B15001E897B /* WallpaperService.swift */,
+				C0FFEE01A1B2C3D4E5F60001 /* WallpaperActivity.swift */,
 				AAUC00012899C1CB009E0700 /* UpdateChecker.swift */,
 				AACCD48E289DA639006551C1 /* VideoDownloadService.swift */,
 			);
@@ -526,6 +529,7 @@
 				AARC00022899C1CB009E0700 /* ResponseCache.swift in Sources */,
 				AAVI00022899C1CB009E0700 /* VideoImportService.swift in Sources */,
 				AA278946289C4B15001E897B /* WallpaperService.swift in Sources */,
+				C0FFEE01A1B2C3D4E5F60002 /* WallpaperActivity.swift in Sources */,
 				AAUC00022899C1CB009E0700 /* UpdateChecker.swift in Sources */,
 				AA1F48E52899C301009E07A8 /* AboutView.swift in Sources */,
 				AA35B89F28A40F2900F7B190 /* OnboardingView+IntroView.swift in Sources */,

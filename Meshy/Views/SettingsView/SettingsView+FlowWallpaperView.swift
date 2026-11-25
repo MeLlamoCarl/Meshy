@@ -27,7 +27,7 @@ extension SettingsView {
         @AppStorage("FlowSpeed")
         private var speed: Double = FlowSettings.default.speed
         @AppStorage("FlowFramerate")
-        private var framerate: Int = 60
+        private var framerate: Int = 30
         @AppStorage("FWPaletteChangeInterval")
         private var paletteChangeInterval: Double = FluidWallpaperView.PaletteChangeInterval.oneMin.rawValue
         @AppStorage("shouldColorMatchFWMenuBar")
@@ -50,7 +50,10 @@ extension SettingsView {
                     Picker("Framerate", selection: $framerate) {
                         Text("30 FPS").tag(30)
                         Text("60 FPS").tag(60)
-                        Text("120 FPS").tag(120)
+                        // Only where a screen can show it (it's capped to the refresh rate anyway).
+                        if WallpaperActivity.anyScreenAbove60Hz || framerate == 120 {
+                            Text("120 FPS").tag(120)
+                        }
                     }
                     .pickerStyle(.menu)
                 } header: {
